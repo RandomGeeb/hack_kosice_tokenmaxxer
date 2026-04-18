@@ -10,16 +10,32 @@ function getProjectRoot() {
   return folders && folders.length > 0 ? folders[0].uri.fsPath : null;
 }
 
-function fetchData(cwd) {
+function runPython(args) {
   return new Promise((resolve, reject) => {
-    execFile("python3", [CLI_SCRIPT, "--json", "--no-api", "--cwd", cwd], (err, stdout) => {
-      if (err) return reject(err);
-      try {
-        resolve(JSON.parse(stdout));
-      } catch (e) {
-        reject(e);
+    const pythonBin = process.platform === "win32" ? "python" : "python3";
+    execFile(pythonBin, args, (err, stdout) => {
+      if (err && process.platform !== "win32") {
+        // fallback to python on non-Windows too (e.g. some Linux setups)
+        execFile("python", args, (err2, stdout2) => {
+          if (err2) return reject(err2);
+          resolve(stdout2);
+        });
+      } else if (err) {
+        reject(err);
+      } else {
+        resolve(stdout);
       }
     });
+  });
+}
+
+function fetchData(cwd) {
+  return runPython([CLI_SCRIPT, "--json", "--no-api", "--cwd", cwd]).then((stdout) => {
+    try {
+      return JSON.parse(stdout);
+    } catch (e) {
+      throw e;
+    }
   });
 }
 

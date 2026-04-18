@@ -68,10 +68,21 @@ class TokenMaxxerPanel(private val project: Project) : Disposable {
             .scheduleWithFixedDelay({ refresh() }, 10, 10, TimeUnit.SECONDS)
     }
 
+    private fun resolvePython(): String {
+        val isWindows = System.getProperty("os.name").lowercase().contains("win")
+        if (isWindows) return "python"
+        return try {
+            Runtime.getRuntime().exec(arrayOf("python3", "--version")).waitFor()
+            "python3"
+        } catch (_: Exception) {
+            "python"
+        }
+    }
+
     private fun refresh() {
         val cwd = project.basePath ?: return
         try {
-            val process = ProcessBuilder("python3", cliScript, "--json", "--no-api", "--cwd", cwd)
+            val process = ProcessBuilder(resolvePython(), cliScript, "--json", "--no-api", "--cwd", cwd)
                 .redirectErrorStream(true)
                 .start()
             val output = process.inputStream.bufferedReader().readText()
