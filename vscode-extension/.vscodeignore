@@ -1,0 +1,4 @@
+**/__pycache__/
+**/*.pyc
+.claude/
+tokenmaxxer-0.1.0.vsix

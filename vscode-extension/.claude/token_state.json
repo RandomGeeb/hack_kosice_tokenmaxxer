@@ -1,0 +1,125 @@
+{
+  "session_id": "51451d6a-8c70-4939-8a6f-18c2406126b5",
+  "transcript_path": "/Users/derricklim/.claude/projects/-Users-derricklim-Documents-GitHub-hack-kosice-tokenmaxxer/51451d6a-8c70-4939-8a6f-18c2406126b5.jsonl",
+  "last_user_message": "clear",
+  "last_user_message_tokens": 1,
+  "tool_calls": [
+    {
+      "name": "Bash",
+      "output_chars": 921
+    },
+    {
+      "name": "Bash",
+      "output_chars": 1368
+    },
+    {
+      "name": "Write",
+      "output_chars": 168
+    },
+    {
+      "name": "Bash",
+      "output_chars": 702
+    },
+    {
+      "name": "Bash",
+      "output_chars": 106
+    },
+    {
+      "name": "Read",
+      "output_chars": 93502
+    },
+    {
+      "name": "Bash",
+      "output_chars": 541
+    },
+    {
+      "name": "Bash",
+      "output_chars": 63
+    },
+    {
+      "name": "Bash",
+      "output_chars": 479
+    },
+    {
+      "name": "Read",
+      "output_chars": 78380
+    },
+    {
+      "name": "Read",
+      "output_chars": 7612
+    },
+    {
+      "name": "Read",
+      "output_chars": 693
+    },
+    {
+      "name": "Write",
+      "output_chars": 2146
+    },
+    {
+      "name": "Write",
+      "output_chars": 21447
+    },
+    {
+      "name": "Bash",
+      "output_chars": 791
+    },
+    {
+      "name": "Read",
+      "output_chars": 190529
+    },
+    {
+      "name": "Bash",
+      "output_chars": 644
+    },
+    {
+      "name": "Bash",
+      "output_chars": 23
+    },
+    {
+      "name": "Read",
+      "output_chars": 150025
+    },
+    {
+      "name": "Edit",
+      "output_chars": 1767
+    },
+    {
+      "name": "Edit",
+      "output_chars": 8159
+    },
+    {
+      "name": "Bash",
+      "output_chars": 23
+    },
+    {
+      "name": "Bash",
+      "output_chars": 205
+    },
+    {
+      "name": "Bash",
+      "output_chars": 838
+    },
+    {
+      "name": "Read",
+      "output_chars": 41216
+    },
+    {
+      "name": "Read",
+      "output_chars": 4926
+    },
+    {
+      "name": "Edit",
+      "output_chars": 23255
+    },
+    {
+      "name": "Bash",
+      "output_chars": 237
+    },
+    {
+      "name": "Bash",
+      "output_chars": 30
+    }
+  ],
+  "tool_output_tokens": 157687
+}

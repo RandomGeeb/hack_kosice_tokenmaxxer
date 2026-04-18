@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-CONTEXT_WINDOW = 200_000  # Claude context window (all current models)
+CONTEXT_WINDOW = 200_000  # claude-opus-4-6 context window
 BAR_WIDTH = 20
 
 # Component color palette (rich markup colors)

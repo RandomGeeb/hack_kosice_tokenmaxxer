@@ -21,6 +21,11 @@ def main():
         cwd = data.get("cwd", os.getcwd())
 
         state = load_state(cwd)
+
+        if session_id and state.get("session_id") != session_id:
+            state["tool_calls"] = []
+            state["tool_output_tokens"] = 0
+
         state["session_id"] = session_id
         state["last_user_message"] = prompt
         # Rough estimate here; Stop hook will recalculate with API

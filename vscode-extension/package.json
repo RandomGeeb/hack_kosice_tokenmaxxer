@@ -1,0 +1,30 @@
+{
+  "name": "tokenmaxxer",
+  "displayName": "TokenMaxxer",
+  "description": "Live Claude Code token usage chart in VS Code",
+  "version": "0.1.0",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Other"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "type": "webview",
+          "id": "tokenmaxxer.view",
+          "name": "Token Breakdown"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "tokenmaxxer.showChart",
+        "title": "TokenMaxxer: Show Token Chart"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "echo ok"
+  }
+}
