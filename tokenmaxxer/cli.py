@@ -16,9 +16,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tokenmaxxer.session_state import load_state
 from tokenmaxxer.analyzer import analyze
 from tokenmaxxer.visualizer import render
-
+from tokenmaxxer.db import init_db
 
 def main():
+    init_db()
     parser = argparse.ArgumentParser(description="Show Claude Code token usage breakdown")
     parser.add_argument("--cwd", default=os.getcwd(), help="Project root directory")
     parser.add_argument("--no-api", action="store_true", help="Skip Anthropic API calls (use estimates)")

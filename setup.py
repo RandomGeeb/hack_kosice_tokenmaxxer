@@ -11,7 +11,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-
+from tokenmaxxer.db import init_db
 
 HOOKS_CONFIG = {
     "UserPromptSubmit": [
