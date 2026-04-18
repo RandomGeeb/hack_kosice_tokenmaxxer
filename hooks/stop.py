@@ -7,6 +7,7 @@ Reads JSON from stdin, updates .claude/token_state.json.
 import json
 import sys
 import os
+from tokenmaxxer.db import save_session, save_turn
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
