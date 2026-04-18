@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
-"""
-PostToolUse hook — accumulates token estimates for tool outputs.
-Reads JSON from stdin, updates .claude/token_state.json.
-"""
-
 import json
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from tokenmaxxer.session_state import load_state, save_state
+from tokenmaxxer.db import add_tool_tokens, get_tool_tokens, update_session_snapshot
+from tokenmaxxer.analyzer import analyze
 
 
-def _extract_output_text(tool_response) -> str:
-    """Extract string content from a tool response (may be str, list, or dict)."""
+def _extract_text(tool_response) -> str:
     if isinstance(tool_response, str):
         return tool_response
     if isinstance(tool_response, list):
-        return " ".join(_extract_output_text(item) for item in tool_response)
+        return " ".join(_extract_text(i) for i in tool_response)
     if isinstance(tool_response, dict):
         return " ".join(str(v) for v in tool_response.values())
     return str(tool_response)
@@ -27,25 +22,29 @@ def _extract_output_text(tool_response) -> str:
 def main():
     try:
         data = json.load(sys.stdin)
+        session_id = data.get("session_id", "")
         cwd = data.get("cwd", os.getcwd())
-        tool_name = data.get("tool_name", "unknown")
         tool_response = data.get("tool_response", data.get("output", ""))
 
-        output_text = _extract_output_text(tool_response)
-        output_chars = len(output_text)
-        estimated_tokens = max(0, output_chars // 4)
+        if not session_id:
+            return
 
-        state = load_state(cwd)
+        estimated_tokens = max(0, len(_extract_text(tool_response)) // 4)
+        add_tool_tokens(session_id, estimated_tokens, cwd)
 
-        # Accumulate tool calls list
-        tool_calls = state.get("tool_calls", [])
-        tool_calls.append({"name": tool_name, "output_chars": output_chars})
-        state["tool_calls"] = tool_calls[-50:]  # keep last 50
-
-        state["tool_output_tokens"] = state.get("tool_output_tokens", 0) + estimated_tokens
-        save_state(state, cwd)
+        tool_tokens = get_tool_tokens(session_id, cwd)
+        state = {
+            "session_id": session_id,
+            "transcript_path": None,
+            "last_user_message": "",
+            "last_user_message_tokens": 0,
+            "tool_calls": [],
+            "tool_output_tokens": tool_tokens,
+        }
+        components, _ = analyze(cwd, state, use_api=False)
+        update_session_snapshot(session_id, components, cwd)
     except Exception:
-        pass  # Never interrupt the session
+        pass
 
 
 if __name__ == "__main__":

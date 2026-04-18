@@ -1,60 +1,76 @@
 #!/usr/bin/env python3
 """
-tokenmaxxer CLI — show token breakdown for the current Claude Code session.
-
-Usage:
-    python3 tokenmaxxer/cli.py [--cwd PATH] [--no-api] [--json]
+tokenmaxxer CLI — reads current session token breakdown from DB.
+Used by VS Code / IntelliJ extensions (--json) and terminal (/tokenmaxxer skill).
 """
-
 import argparse
 import json
 import os
 import sys
+from pathlib import Path
 
-# Support both bundled extension (package alongside cli.py) and repo invocation
-_here = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, _here)               # bundled: tokenmaxxer/ sits next to cli.py
-sys.path.insert(0, os.path.dirname(_here))  # repo: cli.py is inside tokenmaxxer/
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from tokenmaxxer.session_state import load_state
-from tokenmaxxer.analyzer import analyze
+from tokenmaxxer.db import init_db, get_active_session
+from tokenmaxxer.analyzer import count_file
 from tokenmaxxer.visualizer import render, CONTEXT_WINDOW
+
+
+def _build_skill_groups() -> list:
+    global_commands = Path.home() / ".claude" / "commands"
+    if not global_commands.is_dir():
+        return []
+    groups: dict[str, list] = {}
+    for f in sorted(global_commands.glob("**/*.md")):
+        if not f.is_file():
+            continue
+        name   = f.stem
+        prefix = name.split(":")[0] if ":" in name else "other"
+        groups.setdefault(prefix, []).append({"name": name, "tokens": count_file(f)})
+    result = []
+    for prefix, skills in sorted(groups.items(), key=lambda x: sum(s["tokens"] for s in x[1]), reverse=True):
+        skills.sort(key=lambda s: s["tokens"], reverse=True)
+        result.append({"prefix": prefix, "total": sum(s["tokens"] for s in skills), "skills": skills})
+    return result
 
 
 def main():
     parser = argparse.ArgumentParser(description="Show Claude Code token usage breakdown")
-    parser.add_argument("--cwd", default=os.getcwd(), help="Project root directory")
-    parser.add_argument("--no-api", action="store_true", help="Skip Anthropic API calls (use estimates)")
-    parser.add_argument("--json", action="store_true", help="Output JSON for programmatic consumption")
+    parser.add_argument("--cwd",    default=os.getcwd(), help="Project root directory")
+    parser.add_argument("--no-api", action="store_true",  help="Skip API calls (always true — DB-based)")
+    parser.add_argument("--json",   action="store_true",  dest="json_out", help="Output JSON for extensions")
     args = parser.parse_args()
 
     cwd = os.path.abspath(args.cwd)
-    use_api = not args.no_api and bool(os.environ.get("ANTHROPIC_API_KEY"))
+    init_db(cwd)
+    session = get_active_session(cwd, cwd)
 
-    state = load_state(cwd)
-    components, skill_groups = analyze(cwd, state, use_api=use_api)
+    if args.json_out:
+        if not session or not session.get("components_json"):
+            print(json.dumps({"error": "No active session"}))
+            return
 
-    if not components:
-        print("No context components found. Make sure you're running from the project root.")
-        sys.exit(1)
-
-    if args.json:
+        components: dict = json.loads(session["components_json"])
         total = sum(components.values())
+        pct   = round(total / CONTEXT_WINDOW * 100, 1)
+
         print(json.dumps({
+            "pct_of_context": pct,
+            "total":          total,
+            "context_window": CONTEXT_WINDOW,
+            "using_estimates": True,
             "components": [
-                {"label": k, "tokens": v, "pct": round(v / total * 100, 2)}
+                {"label": k, "tokens": v, "pct": round(v / total * 100, 1) if total else 0}
                 for k, v in components.items()
             ],
-            "skill_groups": skill_groups,
-            "total": total,
-            "context_window": CONTEXT_WINDOW,
-            "pct_of_context": round(total / CONTEXT_WINDOW * 100, 2),
-            "using_estimates": not use_api,
+            "skill_groups": _build_skill_groups(),
         }))
-        return
-
-    output = render(components, using_estimates=not use_api)
-    print(output)
+    else:
+        if not session or not session.get("components_json"):
+            print("No active session — start a Claude Code session to see token usage.")
+            sys.exit(0)
+        components = json.loads(session["components_json"])
+        print(render(components, using_estimates=True))
 
 
 if __name__ == "__main__":

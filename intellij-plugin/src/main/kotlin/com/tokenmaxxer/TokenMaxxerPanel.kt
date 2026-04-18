@@ -11,6 +11,7 @@ import com.intellij.util.concurrency.AppExecutorUtil
 import java.io.File
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import javax.swing.JComponent
 import kotlin.math.PI
 import kotlin.math.max
@@ -65,7 +66,7 @@ class TokenMaxxerPanel(private val project: Project) : Disposable {
     }
 
     fun start() {
-        refresh()
+        AppExecutorUtil.getAppExecutorService().submit { refresh() }
         pollFuture = AppExecutorUtil.getAppScheduledExecutorService()
             .scheduleWithFixedDelay({ refresh() }, 10, 10, TimeUnit.SECONDS)
     }
@@ -87,8 +88,16 @@ class TokenMaxxerPanel(private val project: Project) : Disposable {
             val process = ProcessBuilder(resolvePython(), cliScript, "--json", "--no-api", "--cwd", cwd)
                 .redirectErrorStream(true)
                 .start()
-            val output = process.inputStream.bufferedReader().readText()
-            process.waitFor(10, TimeUnit.SECONDS)
+            val outputFuture = AppExecutorUtil.getAppExecutorService().submit<String> {
+                process.inputStream.bufferedReader().readText()
+            }
+            val output = try {
+                outputFuture.get(15, TimeUnit.SECONDS)
+            } catch (e: TimeoutException) {
+                process.destroyForcibly()
+                throw IllegalStateException("CLI timed out after 15s")
+            }
+            process.waitFor(5, TimeUnit.SECONDS)
             if (!output.trimStart().startsWith("{")) throw IllegalStateException(output.take(300))
             val errCheck = gson.fromJson(output, TokenError::class.java)
             if (errCheck?.error != null) throw IllegalStateException(errCheck.error)
@@ -97,7 +106,7 @@ class TokenMaxxerPanel(private val project: Project) : Disposable {
             ApplicationManager.getApplication().invokeLater {
                 browser.loadHTML(html)
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             ApplicationManager.getApplication().invokeLater {
                 browser.loadHTML(errorHtml(e.message ?: "Unknown error"))
             }

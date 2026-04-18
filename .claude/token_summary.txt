@@ -1,2 +1,2 @@
-55,396 / 200,000 tokens (27.7%) | Global Skills: 38.2% | Tool Outputs: 34.8% | Conversation History: 23.1%
-For per-skill detail, see the VS Code Token Breakdown panel.
+97,137 / 200,000 tokens (48.6%) | biggest: Conversation History (73,670 tok)
+For full breakdown: python app.py → http://localhost:5000

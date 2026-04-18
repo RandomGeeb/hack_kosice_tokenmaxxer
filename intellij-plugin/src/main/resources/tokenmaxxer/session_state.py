@@ -1,4 +1,6 @@
-"""Read/write the per-session state file stored at .claude/token_state.json."""
+"""Thin shim kept for backwards-compatibility with any existing imports."""
+# The hooks now write directly to the DB. This module is no longer the
+# source of truth but is preserved so the /tokenmaxxer skill command still works.
 
 import json
 from pathlib import Path
@@ -23,7 +25,7 @@ def load_state(cwd: str = ".") -> dict:
         "transcript_path": None,
         "last_user_message": "",
         "last_user_message_tokens": 0,
-        "tool_calls": [],          # list of {name, output_chars}
+        "tool_calls": [],
         "tool_output_tokens": 0,
     }
 

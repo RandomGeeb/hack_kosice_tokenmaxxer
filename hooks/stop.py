@@ -1,26 +1,20 @@
 #!/usr/bin/env python3
-"""
-Stop hook — captures transcript_path and triggers a background token re-count.
-Reads JSON from stdin, updates .claude/token_state.json.
-"""
-
 import json
-import sys
 import os
+import sys
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# ALL tokenmaxxer imports after the path fix
-from tokenmaxxer.session_state import load_state, save_state
-from tokenmaxxer.db import init_db, save_session, save_context_file
+from tokenmaxxer.db import (
+    init_db, get_tool_tokens, update_session_snapshot,
+    update_session_meta, replace_context_files,
+)
 from tokenmaxxer.analyzer import analyze
 
-def get_session_meta(transcript_path):
-    """Extract started_at, last_active, and model from the transcript JSONL."""
-    started_at = ""
-    last_active = ""
-    model = ""
+
+def _get_session_meta(transcript_path: str):
+    started_at = last_active = model = ""
     try:
         lines = Path(transcript_path).read_text().strip().splitlines()
         if lines:
@@ -37,66 +31,45 @@ def get_session_meta(transcript_path):
 def main():
     try:
         data = json.load(sys.stdin)
-        cwd = data.get("cwd", os.getcwd())
-        session_id = data.get("session_id", "")
+        session_id      = data.get("session_id", "")
         transcript_path = data.get("transcript_path", "")
+        cwd             = data.get("cwd", os.getcwd())
 
-        state = load_state(cwd)
-        if session_id:
-            state["session_id"] = session_id
+        if not session_id:
+            return
+
+        init_db(cwd)
+
+        tool_tokens = get_tool_tokens(session_id, cwd)
+        state = {
+            "session_id":              session_id,
+            "transcript_path":         transcript_path,
+            "last_user_message":       "",
+            "last_user_message_tokens": 0,
+            "tool_calls":              [],
+            "tool_output_tokens":      tool_tokens,
+        }
+        components, _ = analyze(cwd, state, use_api=False)
+        update_session_snapshot(session_id, components, cwd)
+        replace_context_files(session_id, components, cwd)
+
         if transcript_path:
-            state["transcript_path"] = transcript_path
+            started_at, last_active, model = _get_session_meta(transcript_path)
+            update_session_meta(session_id, model, started_at, last_active, cwd)
 
-        # Recalculate user message tokens with API if available
-        api_key = os.environ.get("ANTHROPIC_API_KEY")
-        last_user_message = state.get("last_user_message", "")
-        if api_key and last_user_message:
-            try:
-                import anthropic
-                client = anthropic.Anthropic(api_key=api_key)
-                response = client.messages.count_tokens(
-                    model="claude-opus-4-6",
-                    messages=[{"role": "user", "content": last_user_message}],
-                )
-                state["last_user_message_tokens"] = response.input_tokens
-            except Exception:
-                pass
-
-        # Save session snapshot to DB
-        if session_id:
-            try:
-                started_at, last_active, model = get_session_meta(
-                    state.get("transcript_path", "")
-                )
-
-                components, skill_groups = analyze(cwd, state)
-
-                init_db()
-
-                save_session({
-                    "session_id":   session_id,
-                    "project_path": cwd,
-                    "started_at":   started_at,
-                    "last_active":  last_active,
-                    "model":        model,
-                })
-
-                for label, tokens in components.items():
-                    save_context_file({
-                        "session_id":    session_id,
-                        "turn_id":       None,
-                        "file_path":     label,
-                        "tokens":        tokens,
-                        "include_count": 1,
-                        "is_wasteful":   0,
-                        "waste_reason":  None,
-                    })
-            except Exception:
-                pass  # Never interrupt the session
-
-        save_state(state, cwd)
+        # Keep token_summary.txt for the /tokenmaxxer skill command
+        total = sum(components.values())
+        pct   = total / 200_000 * 100
+        biggest = max(components, key=components.get, default="")
+        summary_path = Path(cwd) / ".claude" / "token_summary.txt"
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(
+            f"{total:,} / 200,000 tokens ({pct:.1f}%)"
+            + (f" | biggest: {biggest} ({components[biggest]:,} tok)" if biggest else "")
+            + "\nFor full breakdown: python app.py → http://localhost:5000\n"
+        )
     except Exception:
-        pass  # Never interrupt the session
+        pass
 
 
 if __name__ == "__main__":
