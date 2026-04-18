@@ -54,9 +54,11 @@ class TokenMaxxerPanel(private val project: Project) : Disposable {
         // Copy tokenmaxxer package
         val pkgDir = File(tmpDir, "tokenmaxxer")
         pkgDir.mkdirs()
-        listOf("__init__.py", "analyzer.py", "session_state.py", "visualizer.py").forEach { name ->
+        listOf("__init__.py", "analyzer.py", "session_state.py", "visualizer.py", "db.py").forEach { name ->
             val dest = File(pkgDir, name)
-            javaClass.getResourceAsStream("/tokenmaxxer/$name")?.use { it.copyTo(dest.outputStream()) }
+            val stream = javaClass.getResourceAsStream("/tokenmaxxer/$name")
+                ?: throw IllegalStateException("Missing plugin resource: tokenmaxxer/$name")
+            stream.use { it.copyTo(dest.outputStream()) }
         }
 
         return cliFile.absolutePath

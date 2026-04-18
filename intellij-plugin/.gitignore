@@ -1,2 +1,5 @@
 .gradle/
 build/
+
+# Claude Code local settings (system-specific hook paths)
+.claude/settings.local.json

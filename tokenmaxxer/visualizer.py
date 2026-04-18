@@ -1,4 +1,5 @@
 """Render token breakdown as an ASCII bar chart (with rich color if available)."""
+from __future__ import annotations
 
 from typing import Optional
 

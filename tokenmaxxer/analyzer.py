@@ -1,10 +1,10 @@
 """Core token analysis: discover context components and measure their token counts."""
+from __future__ import annotations
 
 import json
 import os
 from pathlib import Path
 from typing import Optional
-from tokenmaxxer.db import save_session, save_turn, save_context_file
 
 
 # ── Token counting ──────────────────────────────────────────────────────────

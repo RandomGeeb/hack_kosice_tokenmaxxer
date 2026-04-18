@@ -2,6 +2,7 @@
 import sqlite3
 from pathlib import Path
 
+
 DB_PATH = Path(__file__).parent.parent / ".claude" / "tokenmaxxer.db"
 
 def get_conn():

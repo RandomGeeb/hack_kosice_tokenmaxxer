@@ -1,8 +1,9 @@
 """Render token breakdown as an ASCII bar chart (with rich color if available)."""
+from __future__ import annotations
 
 from typing import Optional
 
-CONTEXT_WINDOW = 200_000  # claude-opus-4-6 context window
+CONTEXT_WINDOW = 200_000  # Claude context window (all current models)
 BAR_WIDTH = 20
 
 # Component color palette (rich markup colors)

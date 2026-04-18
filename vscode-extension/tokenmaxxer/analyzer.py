@@ -1,4 +1,5 @@
 """Core token analysis: discover context components and measure their token counts."""
+from __future__ import annotations
 
 import json
 import os
