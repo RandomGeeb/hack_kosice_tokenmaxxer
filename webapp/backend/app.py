@@ -3,7 +3,7 @@ tokenmaxxer history web app
 Run: python app.py
 Then open: http://localhost:5000
 """
-
+import os
 import sqlite3
 import json
 
