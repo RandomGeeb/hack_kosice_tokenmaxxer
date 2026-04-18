@@ -214,6 +214,5 @@ def index():
 if __name__ == "__main__":
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     db = init_db()
-    seed_db(db)
     db.close()
     app.run(debug=True, port=5000)

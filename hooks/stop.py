@@ -7,11 +7,31 @@ Reads JSON from stdin, updates .claude/token_state.json.
 import json
 import sys
 import os
-from tokenmaxxer.db import save_session, save_turn
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# ALL tokenmaxxer imports after the path fix
 from tokenmaxxer.session_state import load_state, save_state
+from tokenmaxxer.db import init_db, save_session, save_context_file
+from tokenmaxxer.analyzer import analyze
+
+def get_session_meta(transcript_path):
+    """Extract started_at, last_active, and model from the transcript JSONL."""
+    started_at = ""
+    last_active = ""
+    model = ""
+    try:
+        lines = Path(transcript_path).read_text().strip().splitlines()
+        if lines:
+            first = json.loads(lines[0])
+            last  = json.loads(lines[-1])
+            started_at  = first.get("timestamp", "")
+            last_active = last.get("timestamp", "")
+            model       = first.get("model", "") or last.get("model", "")
+    except Exception:
+        pass
+    return started_at, last_active, model
 
 
 def main():
@@ -41,6 +61,38 @@ def main():
                 state["last_user_message_tokens"] = response.input_tokens
             except Exception:
                 pass
+
+        # Save session snapshot to DB
+        if session_id:
+            try:
+                started_at, last_active, model = get_session_meta(
+                    state.get("transcript_path", "")
+                )
+
+                components, skill_groups = analyze(cwd, state)
+
+                init_db()
+
+                save_session({
+                    "session_id":   session_id,
+                    "project_path": cwd,
+                    "started_at":   started_at,
+                    "last_active":  last_active,
+                    "model":        model,
+                })
+
+                for label, tokens in components.items():
+                    save_context_file({
+                        "session_id":    session_id,
+                        "turn_id":       None,
+                        "file_path":     label,
+                        "tokens":        tokens,
+                        "include_count": 1,
+                        "is_wasteful":   0,
+                        "waste_reason":  None,
+                    })
+            except Exception:
+                pass  # Never interrupt the session
 
         save_state(state, cwd)
     except Exception:

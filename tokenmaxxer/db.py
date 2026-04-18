@@ -1,8 +1,9 @@
 # tokenmaxxer/db.py
 import sqlite3
-from pathlib import Path
+from db import DB_PATH, init_db, get_conn
 
-DB_PATH = Path(__file__).parent.parent / ".claude" / "tokenmaxxer.db"
+
+DB_PATH = DB_PATH(__file__).parent.parent / ".claude" / "tokenmaxxer.db"
 
 def get_conn():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
