@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from tokenmaxxer.session_state import load_state
 from tokenmaxxer.analyzer import analyze
 from tokenmaxxer.visualizer import render
+from tokenmaxxer.db import init_db
 
 
 def main():
@@ -26,6 +27,8 @@ def main():
 
     cwd = os.path.abspath(args.cwd)
     use_api = not args.no_api and bool(os.environ.get("ANTHROPIC_API_KEY"))
+
+    init_db()
 
     state = load_state(cwd)
     components, _ = analyze(cwd, state, use_api=use_api)
