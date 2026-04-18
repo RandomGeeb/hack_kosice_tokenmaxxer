@@ -5,9 +5,6 @@ Then open: http://localhost:5000
 """
 import os
 import sqlite3
-import json
-
-
 from pathlib import Path
 from datetime import datetime, timedelta
 from flask import Flask, jsonify, render_template, g
@@ -15,7 +12,6 @@ import random
 
 app = Flask(__name__)
 
-# ── DB path: looks for .claude/tokenmaxxer.db relative to cwd ──────────────
 DB_PATH = Path(os.environ.get("TOKENMAXXER_DB", ".claude/tokenmaxxer.db"))
 
 
@@ -73,10 +69,9 @@ def init_db():
 
 
 def seed_db(db):
-    """Insert realistic fake sessions so the UI has data to show."""
     existing = db.execute("SELECT COUNT(*) FROM sessions").fetchone()[0]
     if existing > 0:
-        return  # already seeded
+        return
 
     projects = [
         ("/home/dev/auth-service", "auth-service"),
@@ -104,10 +99,8 @@ def seed_db(db):
         last = started + timedelta(minutes=random.randint(15, 120))
         model = random.choice(models)
 
-        db.execute(
-            "INSERT OR IGNORE INTO sessions VALUES (?,?,?,?,?)",
-            (sid, path, started.isoformat(), last.isoformat(), model)
-        )
+        db.execute("INSERT OR IGNORE INTO sessions VALUES (?,?,?,?,?)",
+                   (sid, path, started.isoformat(), last.isoformat(), model))
 
         num_turns = random.randint(4, 18)
         for t in range(num_turns):
@@ -122,7 +115,6 @@ def seed_db(db):
             )
             turn_id = cursor.lastrowid
 
-            # Add 3-7 files per turn
             chosen_files = random.sample(file_pool, random.randint(3, 7))
             for fp in chosen_files:
                 tokens = random.randint(80, 2400)
@@ -132,7 +124,6 @@ def seed_db(db):
                     (sid, turn_id, fp, tokens, includes, 0, None)
                 )
 
-            # Occasionally add a wasteful file
             if random.random() < 0.4:
                 wf, wr = random.choice(wasteful)
                 db.execute(
@@ -143,8 +134,6 @@ def seed_db(db):
     db.commit()
     print(f"[tokenmaxxer] Seeded DB with 8 demo sessions at {DB_PATH}")
 
-
-# ── API routes ───────────────────────────────────────────────────────────────
 
 @app.route("/api/sessions")
 def api_sessions():
@@ -172,8 +161,7 @@ def api_session_detail(session_id):
         return jsonify({"error": "not found"}), 404
 
     turns = db.execute(
-        "SELECT * FROM turns WHERE session_id=? ORDER BY turn_index",
-        (session_id,)
+        "SELECT * FROM turns WHERE session_id=? ORDER BY turn_index", (session_id,)
     ).fetchall()
 
     top_files = db.execute("""
@@ -206,9 +194,9 @@ def api_session_detail(session_id):
 def api_stats():
     db = get_db()
     totals = db.execute("""
-                        SELECT COUNT(DISTINCT s.session_id)             as session_count,
+                        SELECT COUNT(DISTINCT s.session_id) as session_count,
                                COALESCE(SUM(t.input_tokens+t.output_tokens),0) as total_tokens,
-                               COUNT(DISTINCT t.id)                     as total_turns
+                               COUNT(DISTINCT t.id) as total_turns
                         FROM sessions s
                                  LEFT JOIN turns t ON s.session_id=t.session_id
                         """).fetchone()
@@ -224,6 +212,7 @@ def index():
 
 
 if __name__ == "__main__":
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     db = init_db()
     seed_db(db)
     db.close()
