@@ -1,0 +1,16 @@
+<idea-plugin>
+  <id>com.tokenmaxxer</id>
+  <name>TokenMaxxer</name>
+  <version>0.1.3</version>
+  <vendor>TokenMaxxer</vendor>
+  <description>Live Claude Code token usage chart — shows context window breakdown in a sidebar panel.</description>
+
+  <depends>com.intellij.modules.platform</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <toolWindow id="TokenMaxxer"
+                anchor="right"
+                factoryClass="com.tokenmaxxer.TokenMaxxerWindowFactory"
+                secondary="false"/>
+  </extensions>
+</idea-plugin>

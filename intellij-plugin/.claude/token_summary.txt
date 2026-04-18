@@ -1,0 +1,2 @@
+28,895 / 200,000 tokens (14.4%) | Global Skills: 73.2% | Tool Outputs: 11.9% | Conversation History: 7.8%
+For per-skill detail, see the VS Code Token Breakdown panel.
