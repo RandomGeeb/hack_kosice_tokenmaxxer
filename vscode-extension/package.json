@@ -2,7 +2,7 @@
   "name": "tokenmaxxer",
   "displayName": "TokenMaxxer",
   "description": "Live Claude Code token usage chart in VS Code",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Other"],
   "activationEvents": ["onStartupFinished"],

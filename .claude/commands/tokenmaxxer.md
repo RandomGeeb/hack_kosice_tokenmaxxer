@@ -1,11 +1,7 @@
 Show the token usage breakdown for the current Claude Code session.
 
-Run the following command and display its output verbatim to the user:
+Read the file `.claude/token_summary.txt` and display its contents to the user verbatim.
 
-```
-python3 tokenmaxxer/cli.py
-```
+If the file does not exist, tell the user: "No summary available yet — send one more message and it will appear, or check the VS Code Token Breakdown panel for the full breakdown."
 
-The output is a visual bar chart showing how much of the context window each component is consuming — including CLAUDE.md, memory files, custom skills, conversation history, tool outputs, and the Claude Code baseline overhead. Each row shows the component name, a proportional bar, percentage, and exact token count.
-
-If the command fails, tell the user to run `python3 setup.py` first to configure the plugin, then try again.
+The VS Code Token Breakdown panel (Explorer sidebar) shows the full per-skill breakdown with collapsible groups — check that for detailed analysis.

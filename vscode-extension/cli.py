@@ -32,7 +32,7 @@ def main():
     use_api = not args.no_api and bool(os.environ.get("ANTHROPIC_API_KEY"))
 
     state = load_state(cwd)
-    components = analyze(cwd, state, use_api=use_api)
+    components, skill_groups = analyze(cwd, state, use_api=use_api)
 
     if not components:
         print("No context components found. Make sure you're running from the project root.")
@@ -45,6 +45,7 @@ def main():
                 {"label": k, "tokens": v, "pct": round(v / total * 100, 2)}
                 for k, v in components.items()
             ],
+            "skill_groups": skill_groups,
             "total": total,
             "context_window": CONTEXT_WINDOW,
             "pct_of_context": round(total / CONTEXT_WINDOW * 100, 2),

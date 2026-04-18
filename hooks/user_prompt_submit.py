@@ -27,12 +27,51 @@ def main():
             state["tool_output_tokens"] = 0
 
         state["session_id"] = session_id
+
+        # /clear resets context window — wipe accumulated tool state too
+        if prompt.strip() in ("/clear", "/clear\n"):
+            state["tool_calls"] = []
+            state["tool_output_tokens"] = 0
+            state["last_user_message"] = ""
+            state["last_user_message_tokens"] = 0
+            save_state(state, cwd)
+            return
+
         state["last_user_message"] = prompt
         # Rough estimate here; Stop hook will recalculate with API
         state["last_user_message_tokens"] = max(1, len(prompt) // 4)
         save_state(state, cwd)
+        _write_summary(state, cwd)
     except Exception:
         pass  # Never interrupt the session
+
+
+def _write_summary(state: dict, cwd: str) -> None:
+    """Write a compact one-liner to .claude/token_summary.txt for low-overhead reads."""
+    try:
+        from tokenmaxxer.analyzer import analyze
+        from tokenmaxxer.visualizer import CONTEXT_WINDOW
+        components, _ = analyze(cwd, state, use_api=False)
+        if not components:
+            return
+        total = sum(components.values())
+        pct = total / CONTEXT_WINDOW * 100
+
+        def fmt(label):
+            v = components.get(label, 0)
+            return f"{label}: {v / total * 100:.1f}%" if v else None
+
+        parts = [p for p in [fmt("Global Skills"), fmt("Tool Outputs"), fmt("Conversation History")] if p]
+        line = f"{total:,} / {CONTEXT_WINDOW:,} tokens ({pct:.1f}%)"
+        if parts:
+            line += " | " + " | ".join(parts)
+        line += "\nFor per-skill detail, see the VS Code Token Breakdown panel."
+
+        summary_path = os.path.join(cwd, ".claude", "token_summary.txt")
+        with open(summary_path, "w") as f:
+            f.write(line + "\n")
+    except Exception:
+        pass
 
 
 if __name__ == "__main__":

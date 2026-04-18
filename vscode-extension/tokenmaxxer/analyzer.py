@@ -174,9 +174,30 @@ def analyze(cwd: str, state: dict, use_api: bool = True) -> dict:
     if skill_tokens > 0:
         components["Skills/Commands"] = skill_tokens
 
-    # Also check global skills
+    # Also check global skills — build per-file groups keyed by prefix
     global_commands = Path.home() / ".claude" / "commands"
-    global_skill_tokens = count_directory(global_commands, "**/*.md", client)
+    skill_groups: list[dict] = []
+    if global_commands.is_dir():
+        _groups: dict[str, list[dict]] = {}
+        for f in sorted(global_commands.glob("**/*.md")):
+            if not f.is_file():
+                continue
+            name = f.stem
+            prefix = name.split(":")[0] if ":" in name else "other"
+            tokens = count_file(f, client)
+            _groups.setdefault(prefix, []).append({"name": name, "tokens": tokens})
+        for prefix, skills in sorted(
+            _groups.items(),
+            key=lambda x: sum(s["tokens"] for s in x[1]),
+            reverse=True,
+        ):
+            skills.sort(key=lambda s: s["tokens"], reverse=True)
+            skill_groups.append({
+                "prefix": prefix,
+                "total": sum(s["tokens"] for s in skills),
+                "skills": skills,
+            })
+    global_skill_tokens = sum(g["total"] for g in skill_groups)
     if global_skill_tokens > 0:
         components["Global Skills"] = global_skill_tokens
 
@@ -204,4 +225,4 @@ def analyze(cwd: str, state: dict, use_api: bool = True) -> dict:
     if tool_output_tokens > 0:
         components["Tool Outputs"] = tool_output_tokens
 
-    return components
+    return components, skill_groups

@@ -55,13 +55,38 @@ function getWebviewContent(data) {
     return slice;
   }).join("\n");
 
-  const rows = data.components.map((c, i) => `
-    <div class="row">
-      <span class="dot" style="background:${COLORS[i % COLORS.length]}"></span>
+  const rows = data.components.map((c, i) => {
+    const color = COLORS[i % COLORS.length];
+    if (c.label === "Global Skills" && data.skill_groups && data.skill_groups.length > 0) {
+      return data.skill_groups.map(g => {
+        const gPct = total > 0 ? (g.total / total * 100).toFixed(1) : "0.0";
+        const skillRows = g.skills.map(s => {
+          const sPct = total > 0 ? (s.tokens / total * 100).toFixed(1) : "0.0";
+          return `<div class="skill-row">
+            <span class="skill-name">${s.name}</span>
+            <span class="tok">${s.tokens.toLocaleString()}</span>
+            <span class="pct-val" style="color:${color}88">${sPct}%</span>
+          </div>`;
+        }).join("");
+        return `<details class="skill-group">
+          <summary class="row">
+            <span class="group-arrow"></span>
+            <span class="dot" style="background:${color}"></span>
+            <span class="lbl">${g.prefix} <span class="group-count">(${g.skills.length})</span></span>
+            <span class="tok">${g.total.toLocaleString()}</span>
+            <span class="pct-val" style="color:${color}">${gPct}%</span>
+          </summary>
+          <div class="skill-list">${skillRows}</div>
+        </details>`;
+      }).join("");
+    }
+    return `<div class="row">
+      <span class="dot" style="background:${color}"></span>
       <span class="lbl">${c.label}</span>
       <span class="tok">${c.tokens.toLocaleString()}</span>
-      <span class="pct-val" style="color:${COLORS[i % COLORS.length]}">${c.pct}%</span>
-    </div>`).join("");
+      <span class="pct-val" style="color:${color}">${c.pct}%</span>
+    </div>`;
+  }).join("");
 
   const note = data.using_estimates
     ? `<p class="note">* Estimates only — set ANTHROPIC_API_KEY for exact counts.</p>`
@@ -114,6 +139,18 @@ function getWebviewContent(data) {
     .pct-val { font-size: 11px; font-weight: 600; min-width: 36px; text-align: right; }
 
     .note { margin-top: 10px; font-size: 10px; opacity: 0.3; }
+
+    /* Collapsible skill groups */
+    .skill-group { border: none; }
+    .skill-group > summary { list-style: none; cursor: pointer; }
+    .skill-group > summary::-webkit-details-marker { display: none; }
+    .group-arrow { width: 10px; flex-shrink: 0; font-size: 8px; opacity: 0.5; }
+    .group-arrow::before { content: "▶"; }
+    .skill-group[open] > summary .group-arrow::before { content: "▼"; }
+    .group-count { opacity: 0.35; font-size: 10px; }
+    .skill-list { padding-left: 20px; }
+    .skill-row { display: flex; align-items: center; gap: 7px; padding: 2px 0; }
+    .skill-name { flex: 1; font-size: 10px; opacity: 0.55; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   </style>
 </head>
 <body>
