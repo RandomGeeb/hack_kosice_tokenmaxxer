@@ -71,9 +71,10 @@ def init_db(cwd: str = None):
 def save_session(session: dict, cwd: str = None):
     with get_conn(cwd) as conn:
         conn.execute(
-            """INSERT OR IGNORE INTO sessions
+            """INSERT INTO sessions
                (session_id, project_path, started_at, last_active, model, is_active, tool_output_tokens)
-               VALUES (:session_id, :project_path, :started_at, :last_active, :model, 1, 0)""",
+               VALUES (:session_id, :project_path, :started_at, :last_active, :model, 1, 0)
+               ON CONFLICT(session_id) DO UPDATE SET project_path=excluded.project_path""",
             session,
         )
 
@@ -106,7 +107,7 @@ def get_tool_tokens(session_id: str, cwd: str = None) -> int:
 def update_session_snapshot(session_id: str, components: dict, cwd: str = None):
     with get_conn(cwd) as conn:
         conn.execute(
-            "UPDATE sessions SET components_json=?, last_active=datetime('now') WHERE session_id=?",
+            "UPDATE sessions SET components_json=?, last_active=strftime('%Y-%m-%dT%H:%M:%SZ','now') WHERE session_id=?",
             (json.dumps(components), session_id),
         )
 
@@ -140,7 +141,7 @@ def write_turn(session_id: str, total_tokens: int, cwd: str = None):
         ).fetchone()
         next_index = (row[0] if row else -1) + 1
         conn.execute(
-            "INSERT INTO turns (session_id, turn_index, total_tokens, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            "INSERT INTO turns (session_id, turn_index, total_tokens, timestamp) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ','now'))",
             (session_id, next_index, total_tokens),
         )
 
@@ -163,7 +164,7 @@ def get_active_session(project_path: str, cwd: str = None) -> Optional[dict]:
                 with sqlite3.connect(key) as conn:
                     conn.row_factory = sqlite3.Row
                     row = conn.execute(
-                        "SELECT * FROM sessions WHERE project_path=? AND is_active=1 ORDER BY last_active DESC LIMIT 1",
+                        "SELECT * FROM sessions WHERE project_path=? AND is_active=1 ORDER BY datetime(last_active) DESC LIMIT 1",
                         (project_path,),
                     ).fetchone()
                     if row:
@@ -171,7 +172,7 @@ def get_active_session(project_path: str, cwd: str = None) -> Optional[dict]:
                     row = conn.execute(
                         """SELECT * FROM sessions WHERE is_active=1
                                                     AND ? LIKE project_path || '/%'
-                           ORDER BY length(project_path) DESC, last_active DESC LIMIT 1""",
+                           ORDER BY length(project_path) DESC, datetime(last_active) DESC LIMIT 1""",
                         (project_path,),
                     ).fetchone()
                     if row:
@@ -216,7 +217,7 @@ def get_all_sessions(cwd: str = None):
                               0
                       ) as total_tokens
                FROM sessions s
-               ORDER BY s.last_active DESC"""
+               ORDER BY datetime(s.last_active) DESC"""
         ).fetchall()
 
 

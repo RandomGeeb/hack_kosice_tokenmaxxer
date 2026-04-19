@@ -19,7 +19,11 @@
       "Bash(curl -s \"http://localhost:5001/api/analytics?period=week\")",
       "Bash(curl -s \"http://localhost:5001/api/burners?period=week\")",
       "Bash(curl -s \"http://localhost:5001/api/breakdown?label=other&period=week\")",
-      "Bash(curl -s \"http://localhost:5001/api/breakdown?label=Tool%20Outputs&period=week\")"
+      "Bash(curl -s \"http://localhost:5001/api/breakdown?label=Tool%20Outputs&period=week\")",
+      "Bash(.venv/bin/pip install *)",
+      "Bash(xargs -I{} python3 -c \" import json, sys with open\\('{}'\\) as f: for line in f: try: obj = json.loads\\(line\\) msg = obj.get\\('message', obj\\) if msg.get\\('role'\\) == 'assistant' and 'usage' in msg: print\\(json.dumps\\(msg['usage'], indent=2\\)\\) except: pass \")",
+      "Bash(.venv/bin/python3 -c \"import anthropic; print\\(anthropic.__version__\\)\")",
+      "Bash(.venv/bin/python3 *)"
     ]
   },
   "hooks": {

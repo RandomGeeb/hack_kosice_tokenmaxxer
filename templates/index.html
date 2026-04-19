@@ -270,6 +270,56 @@
         }
         .loading { color: var(--muted); font-size: 12px; padding: 32px; text-align: center; }
 
+        /* ── Settings ─────────────────────────────────────────────────────────────── */
+        .settings-btn {
+          display: flex; align-items: center; justify-content: center;
+          width: 36px; height: 100%; border-left: 1px solid var(--border);
+          color: var(--muted); cursor: pointer; font-size: 14px;
+          transition: color 0.12s, background 0.12s; flex-shrink: 0;
+        }
+        .settings-btn:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+        .settings-btn.active { color: var(--accent); }
+
+        .settings-panel {
+          display: none; position: fixed; top: 44px; right: 0;
+          width: 320px; background: var(--surface); border: 1px solid var(--border);
+          border-top: none; z-index: 100; padding: 14px 16px 16px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+        }
+        .settings-panel.open { display: block; }
+        .settings-title {
+          font-size: 10px; font-weight: 600; text-transform: uppercase;
+          letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px;
+        }
+        .key-row { display: flex; gap: 6px; align-items: center; }
+        .key-input {
+          flex: 1; font-family: var(--mono); font-size: 11px;
+          background: var(--surface2); color: var(--text);
+          border: 1px solid var(--border2); border-radius: 2px;
+          padding: 5px 8px; min-width: 0;
+        }
+        .key-input:focus { outline: none; border-color: var(--accent); }
+        .key-input::placeholder { color: var(--muted); }
+        .key-toggle {
+          font-size: 12px; color: var(--muted); cursor: pointer;
+          padding: 4px; flex-shrink: 0;
+        }
+        .key-toggle:hover { color: var(--text); }
+        .settings-actions { display: flex; gap: 6px; margin-top: 8px; }
+        .settings-btn-sm {
+          font-family: var(--mono); font-size: 11px; font-weight: 500;
+          padding: 4px 10px; border-radius: 2px; cursor: pointer;
+          border: 1px solid var(--border2); background: var(--surface2); color: var(--text);
+          transition: all 0.1s;
+        }
+        .settings-btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+        .settings-btn-sm.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .settings-btn-sm.primary:hover { opacity: 0.9; }
+        .settings-btn-sm.danger { color: var(--warn); border-color: var(--warn-soft); }
+        .settings-btn-sm.danger:hover { background: var(--warn-soft); }
+        .key-status { font-size: 10px; margin-top: 8px; display: flex; align-items: center; gap: 5px; }
+        .key-status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
         .waiting-banner {
           border: 1px solid var(--border); border-radius: 2px; padding: 32px 24px;
           text-align: center; color: var(--muted); background: var(--surface);
@@ -400,7 +450,21 @@
         <div class="hstat"><span class="hstat-val" id="hs-sessions">—</span><span class="hstat-label">sessions</span></div>
         <div class="hstat"><span class="hstat-val" id="hs-tokens">—</span><span class="hstat-label">total tokens</span></div>
     </div>
+    <div class="settings-btn" id="settings-btn" onclick="toggleSettings()" title="API Key Settings">⚙</div>
 </header>
+<div class="settings-panel" id="settings-panel">
+    <div class="settings-title">Anthropic API Key</div>
+    <div class="key-row">
+        <input class="key-input" id="key-input" type="password" placeholder="sk-ant-api03-…" autocomplete="off" oninput="onKeyInput()">
+        <span class="key-toggle" id="key-toggle" onclick="toggleKeyVis()" title="Show/hide">👁</span>
+    </div>
+    <div class="settings-actions">
+        <button class="settings-btn-sm primary" onclick="saveKey()">Save</button>
+        <button class="settings-btn-sm" onclick="testKey()" id="test-btn">Test connection</button>
+        <button class="settings-btn-sm danger" onclick="removeKey()" id="remove-btn" style="display:none">Remove</button>
+    </div>
+    <div class="key-status" id="key-status" style="display:none"></div>
+</div>
 <aside>
     <div class="aside-header">Sessions</div>
     <div class="session-list-wrap">
@@ -425,7 +489,8 @@
 </main>
 
 <script>
-    const COLORS = ["#3574f0","#56a37e","#e5a44b","#c77dff","#ff8a65","#f06292","#4db6ac","#dce775"];
+    // 8 hues evenly spaced ~45° apart on the wheel, tuned for dark backgrounds
+    const COLORS = ["#5b8af5","#3dce7a","#f5a623","#a855f7","#ff6b6b","#e879aa","#22d0ee","#c8de3f"];
     const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n);
     const fmtDate = s => s ? new Date(s).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
     function pressureColor(pct) {
@@ -480,8 +545,12 @@
                 activeSessionId = s.session_id;
                 document.querySelectorAll('.session-item').forEach(e => e.classList.remove('active'));
                 el.classList.add('active');
-                showPage('history');
-                loadSessionDetail(s.session_id);
+                if (s.is_active) {
+                    showPage('live');
+                } else {
+                    showPage('history');
+                    loadSessionDetail(s.session_id);
+                }
             });
             list.appendChild(el);
         });
@@ -496,12 +565,14 @@
     function renderDonut(components, skillGroups, grandTotal, pct, pctColor) {
         const R = 44, SW = 13, CX = 60, CY = 60, circ = 2 * Math.PI * R, GAP = 1.5;
         const slices = [];
-        components.forEach((c, i) => {
-            if (!(c.label === 'Global Skills' && skillGroups && skillGroups.length))
-                slices.push({ label: c.label, tokens: c.tokens, color: COLORS[i % COLORS.length] });
+        let ci = 0;
+        components.forEach((c) => {
+            if (c.label === 'Global Skills' && skillGroups && skillGroups.length) { ci++; return; }
+            slices.push({ label: c.label, tokens: c.tokens, color: COLORS[ci++ % COLORS.length] });
         });
+        const skillStartIdx = ci;
         (skillGroups || []).forEach((g, gi) =>
-            slices.push({ label: g.group === 'other' ? 'Loaded Skills' : g.group, tokens: g.total, color: COLORS[(gi + 4) % COLORS.length] }));
+            slices.push({ label: g.group === 'other' ? 'Loaded Skills' : g.group, tokens: g.total, color: COLORS[(skillStartIdx + gi) % COLORS.length] }));
 
         const total = slices.reduce((a, s) => a + s.tokens, 0) || 1;
         let offset = 0;
@@ -733,8 +804,9 @@
     // ── Shared renderers ──────────────────────────────────────────────────────────
     function renderComponents(components, grandTotal) {
         if (!components.length) return '';
-        return components.map((c, i) => {
-            const color  = COLORS[i % COLORS.length];
+        let ci = 0;
+        return components.map((c) => {
+            const color  = COLORS[ci++ % COLORS.length];
             const barPct = grandTotal > 0 ? Math.round(c.tokens / grandTotal * 100) : 0;
             const pct    = c.pct !== undefined ? c.pct : (grandTotal > 0 ? (c.tokens / grandTotal * 100).toFixed(1) : 0);
             return `<div class="comp-row">
@@ -746,10 +818,10 @@
         }).join('');
     }
 
-    function renderSkillGroups(skillGroups, grandTotal) {
+    function renderSkillGroups(skillGroups, grandTotal, startIdx = 4) {
         if (!skillGroups || !skillGroups.length) return '';
         return skillGroups.map((g, gi) => {
-            const color      = COLORS[(gi + 4) % COLORS.length];
+            const color      = COLORS[(startIdx + gi) % COLORS.length];
             const pct        = grandTotal > 0 ? (g.total / grandTotal * 100).toFixed(1) : 0;
             const barPct     = grandTotal > 0 ? Math.round(g.total / grandTotal * 100) : 0;
             const groupId    = `group-${gi}-${Date.now()}`;
@@ -810,7 +882,7 @@
         const components  = data.components  || [];
         const totalCount  = components.length + skillGroups.reduce((a, g) => a + g.skills.length, 0);
         const compHtml   = renderComponents(components, data.total);
-        const skillHtml  = renderSkillGroups(skillGroups, data.total);
+        const skillHtml  = renderSkillGroups(skillGroups, data.total, components.length);
         const donutHtml  = renderDonut(components, skillGroups, data.total, pct, color);
 
         fetchPressure(s.session_id, pts => {
@@ -867,7 +939,7 @@
         const project     = (s.project_path || '').split('/').pop() || s.session_id.slice(0,8);
         const totalCount  = components.length + skillGroups.reduce((a, g) => a + g.skills.length, 0);
         const compHtml  = renderComponents(components, grandTotal);
-        const skillHtml = renderSkillGroups(skillGroups, grandTotal);
+        const skillHtml = renderSkillGroups(skillGroups, grandTotal, components.length);
         const donutHtml = renderDonut(components, skillGroups, grandTotal, pct, pctColor);
         const costHtml  = renderCostCard(grandTotal);
 
@@ -1128,6 +1200,93 @@
                 </div>
             </div>`;
     }
+
+    // ── API Key settings ──────────────────────────────────────────────────────────
+    function toggleSettings() {
+        const panel = document.getElementById('settings-panel');
+        const btn   = document.getElementById('settings-btn');
+        const open  = panel.classList.toggle('open');
+        btn.classList.toggle('active', open);
+        if (open) loadKeyStatus();
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('#settings-panel') && !e.target.closest('#settings-btn'))
+            document.getElementById('settings-panel').classList.remove('open'),
+            document.getElementById('settings-btn').classList.remove('active');
+    });
+
+    function loadKeyStatus() {
+        fetch('/api/config').then(r => r.json()).then(cfg => {
+            const inp = document.getElementById('key-input');
+            const rem = document.getElementById('remove-btn');
+            const st  = document.getElementById('key-status');
+            if (cfg.has_key) {
+                inp.placeholder = cfg.masked_key;
+                inp.value = '';
+                rem.style.display = '';
+                showStatus('ok', 'API key saved');
+            } else {
+                inp.placeholder = 'sk-ant-api03-…';
+                rem.style.display = 'none';
+                st.style.display = 'none';
+            }
+        }).catch(() => {});
+    }
+
+    function onKeyInput() {
+        document.getElementById('key-status').style.display = 'none';
+    }
+
+    function toggleKeyVis() {
+        const inp = document.getElementById('key-input');
+        inp.type = inp.type === 'password' ? 'text' : 'password';
+    }
+
+    function showStatus(state, msg) {
+        const el  = document.getElementById('key-status');
+        const dot = state === 'ok' ? 'var(--ok)' : state === 'err' ? 'var(--warn)' : 'var(--muted)';
+        el.style.display = 'flex';
+        el.innerHTML = `<span class="key-status-dot" style="background:${dot}"></span><span style="color:var(--muted)">${msg}</span>`;
+    }
+
+    function saveKey() {
+        const key = document.getElementById('key-input').value.trim();
+        if (!key) { showStatus('err', 'Enter a key first'); return; }
+        showStatus('muted', 'Saving…');
+        fetch('/api/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({api_key: key}) })
+            .then(r => r.json())
+            .then(() => {
+                document.getElementById('key-input').value = '';
+                document.getElementById('remove-btn').style.display = '';
+                showStatus('ok', 'Saved — click Test connection to verify');
+            }).catch(() => showStatus('err', 'Failed to save'));
+    }
+
+    function testKey() {
+        const btn = document.getElementById('test-btn');
+        btn.textContent = 'Testing…'; btn.disabled = true;
+        showStatus('muted', 'Connecting to Anthropic…');
+        fetch('/api/config/validate', { method: 'POST' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.valid) showStatus('ok', `Connected · ${d.models ? d.models.length + ' models available' : 'valid key'}`);
+                else showStatus('err', d.error || 'Invalid key');
+            })
+            .catch(() => showStatus('err', 'Network error'))
+            .finally(() => { btn.textContent = 'Test connection'; btn.disabled = false; });
+    }
+
+    function removeKey() {
+        fetch('/api/config', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({api_key: ''}) })
+            .then(() => {
+                document.getElementById('key-input').value = '';
+                document.getElementById('key-input').placeholder = 'sk-ant-api03-…';
+                document.getElementById('remove-btn').style.display = 'none';
+                showStatus('muted', 'API key removed');
+            }).catch(() => {});
+    }
+
+    loadKeyStatus();
 
     // ── Periodic refresh ──────────────────────────────────────────────────────────
     setInterval(() => {

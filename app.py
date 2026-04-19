@@ -6,14 +6,28 @@ Then open: http://localhost:5000
 import json
 import os
 import sqlite3
+import urllib.request
+import urllib.error
 from pathlib import Path
 
 from flask import Flask, jsonify, render_template, g, request
 
 app = Flask(__name__)
 
-DB_PATH = Path(os.environ.get("TOKENMAXXER_DB", ".claude/tokenmaxxer.db"))
+DB_PATH      = Path(os.environ.get("TOKENMAXXER_DB",     ".claude/tokenmaxxer.db"))
+CONFIG_PATH  = Path(os.environ.get("TOKENMAXXER_CONFIG", ".claude/tokenmaxxer_config.json"))
 CONTEXT_WINDOW = 200_000
+
+
+def _load_config():
+    try:
+        return json.loads(CONFIG_PATH.read_text())
+    except Exception:
+        return {}
+
+def _save_config(data):
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG_PATH.write_text(json.dumps(data, indent=2))
 
 
 def get_db():
@@ -71,7 +85,7 @@ def _get_skill_groups(db, session_id):
 def api_current():
     db = get_db()
     row = db.execute(
-        "SELECT * FROM sessions WHERE is_active=1 ORDER BY last_active DESC LIMIT 1"
+        "SELECT * FROM sessions WHERE is_active=1 ORDER BY datetime(last_active) DESC LIMIT 1"
     ).fetchone()
     if not row:
         return jsonify({"active": False})
@@ -79,28 +93,45 @@ def api_current():
     session    = dict(row)
     session_id = session["session_id"]
 
-    # Top-level components
-    component_rows = db.execute(
-        """SELECT file_path AS label, tokens
-           FROM context_files
-           WHERE session_id=? AND group_name IS NULL
-           ORDER BY tokens DESC""",
-        (session_id,)
-    ).fetchall()
-    comp_total = sum(r["tokens"] for r in component_rows)
-    components = [
-        {
-            "label":  r["label"],
-            "tokens": r["tokens"],
-            "pct":    round(r["tokens"] / comp_total * 100, 1) if comp_total else 0,
-        }
-        for r in component_rows
-    ]
+    # Use components_json (updated every hook) when available — it always includes
+    # the "Conversation + Tools" remainder which context_files may not have yet.
+    components_json = session.get("components_json")
+    if components_json:
+        try:
+            comp_dict = json.loads(components_json)
+            comp_total = sum(comp_dict.values())
+            components = [
+                {
+                    "label":  label,
+                    "tokens": tokens,
+                    "pct":    round(tokens / comp_total * 100, 1) if comp_total else 0,
+                }
+                for label, tokens in comp_dict.items()
+            ]
+        except Exception:
+            components_json = None
+
+    if not components_json:
+        component_rows = db.execute(
+            """SELECT file_path AS label, tokens
+               FROM context_files
+               WHERE session_id=? AND group_name IS NULL
+               ORDER BY tokens DESC""",
+            (session_id,)
+        ).fetchall()
+        comp_total = sum(r["tokens"] for r in component_rows)
+        components = [
+            {
+                "label":  r["label"],
+                "tokens": r["tokens"],
+                "pct":    round(r["tokens"] / comp_total * 100, 1) if comp_total else 0,
+            }
+            for r in component_rows
+        ]
 
     # Skill groups
     skill_groups = _get_skill_groups(db, session_id)
-    skill_total  = sum(g["total"] for g in skill_groups)
-    grand_total  = comp_total + skill_total
+    grand_total  = comp_total
 
     return jsonify({
         "active":         True,
@@ -323,6 +354,48 @@ def api_pressure(session_id):
         for r in rows
     ]
     return jsonify(points)
+
+
+@app.route("/api/config", methods=["GET"])
+def api_config_get():
+    cfg = _load_config()
+    key = cfg.get("api_key", "")
+    masked = f"{key[:12]}···{key[-4:]}" if len(key) > 16 else ("set" if key else "")
+    return jsonify({"has_key": bool(key), "masked_key": masked})
+
+
+@app.route("/api/config", methods=["POST"])
+def api_config_set():
+    key = (request.json or {}).get("api_key", "").strip()
+    cfg = _load_config()
+    if key:
+        cfg["api_key"] = key
+    else:
+        cfg.pop("api_key", None)
+    _save_config(cfg)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/config/validate", methods=["POST"])
+def api_config_validate():
+    cfg = _load_config()
+    key = cfg.get("api_key", "")
+    if not key:
+        return jsonify({"valid": False, "error": "No API key saved"})
+    try:
+        req = urllib.request.Request(
+            "https://api.anthropic.com/v1/models",
+            headers={"x-api-key": key, "anthropic-version": "2023-06-01"},
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read())
+            models = [m.get("id", "") for m in data.get("data", [])]
+            return jsonify({"valid": True, "models": models})
+    except urllib.error.HTTPError as e:
+        msg = {401: "Invalid API key", 403: "Permission denied"}.get(e.code, f"HTTP {e.code}")
+        return jsonify({"valid": False, "error": msg})
+    except Exception as e:
+        return jsonify({"valid": False, "error": str(e)})
 
 
 @app.route("/")

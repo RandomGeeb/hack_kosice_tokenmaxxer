@@ -1,9 +1,7 @@
-Active session: 66d98c3a-db6c-48...
-Last updated:   2026-04-19 00:04:52 UTC
+Active session: 3ad7f279-a3c3-4d...
+Last updated:   2026-04-19 07:04:31 UTC
 
-  CC Baseline               2,000
-  Global Skills            21,144
-  Conversation History     37,555
-  Tool Outputs                500
-  ────────────────────────────────
-  Total                    61,199
+  CC Baseline        2,000
+  Global Skills     21,144
+  ─────────────────────────
+  Total (est)       23,144

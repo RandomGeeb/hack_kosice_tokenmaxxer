@@ -11,7 +11,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from tokenmaxxer.db import init_db, get_active_session, get_all_sessions
+from tokenmaxxer.db import init_db, get_active_session
 from tokenmaxxer.analyzer import count_file
 from tokenmaxxer.visualizer import render, CONTEXT_WINDOW
 
@@ -36,41 +36,14 @@ def _build_skill_groups() -> list:
 
 def main():
     parser = argparse.ArgumentParser(description="Show Claude Code token usage breakdown")
-    parser.add_argument("--cwd",           default=os.getcwd(), help="Project root directory")
-    parser.add_argument("--no-api",        action="store_true",  help="Skip API calls (always true — DB-based)")
-    parser.add_argument("--json",          action="store_true",  dest="json_out", help="Output JSON for extensions")
-    parser.add_argument("--list-sessions", action="store_true",  dest="list_sessions", help="Output all sessions as JSON array")
-    parser.add_argument("--session",       default=None,         help="Session ID to fetch (overrides active session lookup)")
+    parser.add_argument("--cwd",    default=os.getcwd(), help="Project root directory")
+    parser.add_argument("--no-api", action="store_true",  help="Skip API calls (always true — DB-based)")
+    parser.add_argument("--json",   action="store_true",  dest="json_out", help="Output JSON for extensions")
     args = parser.parse_args()
 
     cwd = os.path.abspath(args.cwd)
     init_db(cwd)
-
-    if args.list_sessions:
-        rows = get_all_sessions(cwd)
-        result = []
-        for row in rows:
-            r = dict(row)
-            result.append({
-                "session_id": r.get("session_id", ""),
-                "started_at": r.get("started_at") or "",
-                "last_active": r.get("last_active") or "",
-                "is_active": bool(r.get("is_active", 0)),
-                "has_data": bool(r.get("components_json")),
-            })
-        print(json.dumps(result))
-        return
-
-    if args.session:
-        rows = get_all_sessions(cwd)
-        session = None
-        for row in rows:
-            r = dict(row)
-            if r.get("session_id") == args.session:
-                session = r
-                break
-    else:
-        session = get_active_session(cwd, cwd)
+    session = get_active_session(cwd, cwd)
 
     if args.json_out:
         if not session or not session.get("components_json"):

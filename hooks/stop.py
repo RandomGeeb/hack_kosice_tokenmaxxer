@@ -10,7 +10,7 @@ from tokenmaxxer.db import (
     init_db, get_tool_tokens, update_session_snapshot,
     update_session_meta, replace_context_files, write_turn,
 )
-from tokenmaxxer.analyzer import analyze, write_token_summary
+from tokenmaxxer.analyzer import analyze, write_token_summary, with_remainder
 
 
 def _get_session_meta(transcript_path: str):
@@ -49,11 +49,13 @@ def main():
             "tool_calls":               [],
             "tool_output_tokens":       tool_tokens,
         }
-        components, skill_groups = analyze(cwd, state, use_api=True)
-        update_session_snapshot(session_id, components, cwd)
-        replace_context_files(session_id, components, skill_groups, cwd)
-        write_turn(session_id, sum(components.values()), cwd)
-        write_token_summary(cwd, session_id, components)
+        components, skill_groups, actual_total, transcript_breakdown = analyze(cwd, state, use_api=True)
+        total = actual_total or sum(components.values())
+        components_full = with_remainder(components, actual_total)
+        update_session_snapshot(session_id, components_full, cwd)
+        replace_context_files(session_id, components_full, skill_groups, cwd)
+        write_turn(session_id, total, cwd)
+        write_token_summary(cwd, session_id, components, actual_total, transcript_breakdown)
 
         if transcript_path:
             started_at, last_active, model = _get_session_meta(transcript_path)
