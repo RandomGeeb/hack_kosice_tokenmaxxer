@@ -8,7 +8,7 @@ import os
 import sqlite3
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template, g
+from flask import Flask, jsonify, render_template, g, request
 
 app = Flask(__name__)
 
@@ -29,6 +29,13 @@ def close_db(e=None):
     db = g.pop("db", None)
     if db:
         db.close()
+
+
+def _period_filter(period, ts_col):
+    modifiers = {"day": "-1 day", "week": "-7 days", "month": "-30 days"}
+    if period in modifiers:
+        return f"AND datetime({ts_col}) >= datetime('now', '{modifiers[period]}')"
+    return ""
 
 
 def _get_skill_groups(db, session_id):
@@ -151,18 +158,137 @@ def api_session_detail(session_id):
 @app.route("/api/burners")
 def api_burners():
     db = get_db()
+    period = request.args.get("period", "")
+    period_clause = _period_filter(period, "s.last_active")
     rows = db.execute(
-        """SELECT file_path                    AS label,
-                  SUM(tokens)                  AS total_tokens,
-                  COUNT(DISTINCT session_id)   AS session_count,
-                  CAST(AVG(tokens) AS INTEGER) AS avg_tokens
-           FROM context_files
-           WHERE group_name IS NULL
-           GROUP BY file_path
+        f"""SELECT COALESCE(cf.group_name, cf.file_path)                          AS raw_key,
+                  CASE WHEN cf.group_name = 'other' THEN 'Loaded Skills'
+                       ELSE COALESCE(cf.group_name, cf.file_path) END             AS label,
+                  CASE WHEN cf.group_name IS NOT NULL THEN 1 ELSE 0 END           AS is_group,
+                  SUM(cf.tokens)                                                   AS total_tokens,
+                  COUNT(DISTINCT cf.session_id)                                   AS session_count,
+                  CAST(AVG(cf.tokens) AS INTEGER)                                 AS avg_tokens
+           FROM context_files cf
+           JOIN sessions s ON s.session_id = cf.session_id
+           WHERE 1=1
+             {period_clause}
+           GROUP BY COALESCE(cf.group_name, cf.file_path)
            ORDER BY total_tokens DESC
-               LIMIT 20"""
+           LIMIT 20"""
     ).fetchall()
     return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/analytics")
+def api_analytics():
+    from datetime import datetime as dt
+    db = get_db()
+    period = request.args.get("period", "week")
+
+    sess_clause  = _period_filter(period, "s.last_active")
+    turns_clause = _period_filter(period, "t.timestamp")
+
+    agg = db.execute(
+        f"""SELECT COUNT(DISTINCT cf.session_id) AS session_count,
+                   COALESCE(SUM(cf.tokens), 0)   AS total_tokens
+            FROM context_files cf
+            JOIN sessions s ON s.session_id = cf.session_id
+            WHERE 1=1 {sess_clause}"""
+    ).fetchone()
+
+    peak_row = db.execute(
+        f"""SELECT strftime('%H', t.timestamp) AS hour,
+                   SUM(t.total_tokens)         AS tok_sum
+            FROM turns t
+            JOIN sessions s ON s.session_id = t.session_id
+            WHERE t.total_tokens IS NOT NULL {turns_clause}
+            GROUP BY hour ORDER BY tok_sum DESC LIMIT 1"""
+    ).fetchone()
+    peak_hour = int(peak_row["hour"]) if peak_row else None
+
+    pressure_rows = db.execute(
+        f"""SELECT MAX(t.total_tokens) AS peak_tok
+            FROM turns t
+            JOIN sessions s ON s.session_id = t.session_id
+            WHERE t.total_tokens IS NOT NULL {turns_clause}
+            GROUP BY t.session_id"""
+    ).fetchall()
+    avg_pressure = 0.0
+    if pressure_rows:
+        avg_pressure = round(
+            sum(r["peak_tok"] / CONTEXT_WINDOW * 100 for r in pressure_rows) / len(pressure_rows), 1
+        )
+
+    bucket_expr = "strftime('%H', t.timestamp)" if period == "day" else "DATE(t.timestamp)"
+    time_rows = db.execute(
+        f"""SELECT bucket, SUM(peak_tok) AS tokens
+            FROM (
+                SELECT {bucket_expr} AS bucket, t.session_id,
+                       MAX(t.total_tokens) AS peak_tok
+                FROM turns t
+                JOIN sessions s ON s.session_id = t.session_id
+                WHERE t.total_tokens IS NOT NULL {turns_clause}
+                GROUP BY {bucket_expr}, t.session_id
+            ) sub
+            GROUP BY bucket ORDER BY bucket ASC"""
+    ).fetchall()
+
+    def fmt_bucket(b):
+        if period == "day":
+            return b + "h"
+        try:
+            d = dt.strptime(b, "%Y-%m-%d")
+            return f"{d.strftime('%b')} {d.day}"
+        except Exception:
+            return b
+
+    return jsonify({
+        "total_tokens":     agg["total_tokens"],
+        "session_count":    agg["session_count"],
+        "peak_hour":        peak_hour,
+        "avg_pressure_pct": avg_pressure,
+        "usage_over_time":  [{"label": fmt_bucket(r["bucket"]), "tokens": r["tokens"]} for r in time_rows],
+    })
+
+
+@app.route("/api/breakdown")
+def api_breakdown():
+    db = get_db()
+    raw_key = request.args.get("raw_key", "")
+    period  = request.args.get("period", "week")
+    period_clause = _period_filter(period, "s.last_active")
+
+    # If raw_key matches a group_name, return individual file_paths in that group
+    group_rows = db.execute(
+        f"""SELECT cf.file_path                    AS label,
+                   SUM(cf.tokens)                  AS total_tokens,
+                   COUNT(DISTINCT cf.session_id)   AS session_count,
+                   CAST(AVG(cf.tokens) AS INTEGER) AS avg_tokens
+            FROM context_files cf
+            JOIN sessions s ON s.session_id = cf.session_id
+            WHERE cf.group_name = ? {period_clause}
+            GROUP BY cf.file_path
+            ORDER BY total_tokens DESC
+            LIMIT 30""",
+        (raw_key,)
+    ).fetchall()
+    if group_rows:
+        return jsonify({"type": "group", "items": [dict(r) for r in group_rows]})
+
+    # Otherwise break down by session (per-project path)
+    comp_rows = db.execute(
+        f"""SELECT COALESCE(s.project_path, s.session_id) AS label,
+                   cf.tokens                              AS total_tokens,
+                   s.session_id,
+                   s.last_active
+            FROM context_files cf
+            JOIN sessions s ON s.session_id = cf.session_id
+            WHERE cf.file_path = ? AND cf.group_name IS NULL {period_clause}
+            ORDER BY cf.tokens DESC
+            LIMIT 15""",
+        (raw_key,)
+    ).fetchall()
+    return jsonify({"type": "component", "items": [dict(r) for r in comp_rows]})
 
 
 @app.route("/api/stats")

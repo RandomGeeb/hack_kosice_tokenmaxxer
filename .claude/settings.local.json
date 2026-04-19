@@ -15,7 +15,11 @@
       "Bash(lsof *)",
       "Bash(open *)",
       "Bash(disown)",
-      "Bash(FLASK_RUN_PORT=5001 .venv/bin/python *)"
+      "Bash(FLASK_RUN_PORT=5001 .venv/bin/python *)",
+      "Bash(curl -s \"http://localhost:5001/api/analytics?period=week\")",
+      "Bash(curl -s \"http://localhost:5001/api/burners?period=week\")",
+      "Bash(curl -s \"http://localhost:5001/api/breakdown?label=other&period=week\")",
+      "Bash(curl -s \"http://localhost:5001/api/breakdown?label=Tool%20Outputs&period=week\")"
     ]
   },
   "hooks": {

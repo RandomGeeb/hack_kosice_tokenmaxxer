@@ -233,16 +233,36 @@
 
         /* ── Burner rows ──────────────────────────────────────────────────────── */
         .burner-row {
-          display: grid; grid-template-columns: 170px 1fr 88px 36px;
+          display: grid; grid-template-columns: 170px 1fr 88px 36px 16px;
           gap: 8px; align-items: center;
           padding: 6px 12px;
           border-bottom: 1px solid var(--border);
+          cursor: pointer; user-select: none;
+          transition: background 0.08s;
         }
-        .burner-row:last-child { border-bottom: none; }
+        .burner-row:hover { background: rgba(255,255,255,0.03); }
         .burner-label { font-size: 11px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .burner-sub { font-size: 10px; color: var(--muted); margin-top: 1px; }
         .burner-tokens { text-align: right; font-size: 10px; color: var(--muted); }
         .burner-pct { text-align: right; font-size: 11px; font-weight: 600; }
+        .burner-chevron { font-size: 9px; color: var(--muted); text-align: center; transition: transform 0.15s; display: inline-block; }
+        .burner-chevron.open { transform: rotate(90deg); }
+
+        .burner-expand { display: none; background: var(--bg); border-bottom: 1px solid var(--border); }
+        .burner-expand.open { display: block; }
+        .expand-row {
+          display: grid; grid-template-columns: 170px 1fr 88px;
+          gap: 8px; align-items: center;
+          padding: 4px 12px 4px 28px;
+          border-bottom: 1px solid rgba(255,255,255,0.025);
+          font-size: 10px;
+        }
+        .expand-row:last-child { border-bottom: none; }
+        .expand-label { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .expand-sub { font-size: 9px; color: var(--muted); opacity: 0.6; margin-top: 1px; }
+        .expand-bar { background: var(--border); border-radius: 1px; height: 3px; overflow: hidden; }
+        .expand-bar-fill { height: 100%; border-radius: 1px; opacity: 0.55; }
+        .expand-tokens { text-align: right; color: var(--muted); }
 
         .model-pill {
           font-size: 10px; padding: 1px 6px; border-radius: 2px;
@@ -315,6 +335,36 @@
         .cost-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
         .cost-sub { font-size: 10px; color: var(--muted); margin-top: 3px; }
 
+        /* ── Period toggle ────────────────────────────────────────────────────────── */
+        .period-toggle { display: flex; gap: 1px; margin-bottom: 8px; }
+        .period-btn {
+          font-family: var(--mono); font-size: 11px; font-weight: 500;
+          padding: 4px 14px; border: 1px solid var(--border2);
+          background: var(--surface2); color: var(--muted); cursor: pointer;
+          transition: all 0.1s;
+        }
+        .period-btn:first-child { border-radius: 2px 0 0 2px; }
+        .period-btn:last-child  { border-radius: 0 2px 2px 0; }
+        .period-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+        /* ── Analytics 4-column grid ──────────────────────────────────────────────── */
+        .analytics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 8px; }
+
+        /* ── Time bar chart ───────────────────────────────────────────────────────── */
+        .time-chart { padding: 10px 12px 6px; }
+        .time-chart-bars { display: flex; align-items: stretch; gap: 3px; height: 96px; }
+        .time-bar-col {
+          display: flex; flex-direction: column; align-items: center;
+          flex: 1; min-width: 0; cursor: default;
+        }
+        .time-bar-spacer { flex: 1; }
+        .time-bar-fill { width: 100%; border-radius: 1px 1px 0 0; }
+        .time-bar-label {
+          font-size: 8px; color: var(--muted); margin-top: 3px;
+          text-align: center; white-space: nowrap; overflow: hidden;
+          max-width: 100%; text-overflow: ellipsis;
+        }
+
         /* ── Pressure line chart ──────────────────────────────────────────────────── */
         .pressure-chart-wrap {
           background: var(--surface); border: 1px solid var(--border);
@@ -344,7 +394,7 @@
     <nav class="tabs" id="tab-nav">
         <div class="tab active" data-page="live">Live <span class="live-dot inactive" id="live-dot"></span></div>
         <div class="tab" data-page="history">History</div>
-        <div class="tab" data-page="stats">Top Burners</div>
+        <div class="tab" data-page="stats">Insights</div>
     </nav>
     <div class="header-stats">
         <div class="hstat"><span class="hstat-val" id="hs-sessions">—</span><span class="hstat-label">sessions</span></div>
@@ -391,7 +441,7 @@
         document.getElementById('page-' + name).classList.add('active');
         const matchingTab = document.querySelector(`.tab[data-page="${name}"]`);
         if (matchingTab) matchingTab.classList.add('active');
-        if (name === 'stats') loadBurners();
+        if (name === 'stats') loadStatsPage(_activePeriod);
     }
     document.getElementById('tab-nav').addEventListener('click', e => {
         const tab = e.target.closest('.tab');
@@ -451,7 +501,7 @@
                 slices.push({ label: c.label, tokens: c.tokens, color: COLORS[i % COLORS.length] });
         });
         (skillGroups || []).forEach((g, gi) =>
-            slices.push({ label: g.group, tokens: g.total, color: COLORS[(gi + 4) % COLORS.length] }));
+            slices.push({ label: g.group === 'other' ? 'Loaded Skills' : g.group, tokens: g.total, color: COLORS[(gi + 4) % COLORS.length] }));
 
         const total = slices.reduce((a, s) => a + s.tokens, 0) || 1;
         let offset = 0;
@@ -699,10 +749,11 @@
     function renderSkillGroups(skillGroups, grandTotal) {
         if (!skillGroups || !skillGroups.length) return '';
         return skillGroups.map((g, gi) => {
-            const color   = COLORS[(gi + 4) % COLORS.length];
-            const pct     = grandTotal > 0 ? (g.total / grandTotal * 100).toFixed(1) : 0;
-            const barPct  = grandTotal > 0 ? Math.round(g.total / grandTotal * 100) : 0;
-            const groupId = `group-${gi}-${Date.now()}`;
+            const color      = COLORS[(gi + 4) % COLORS.length];
+            const pct        = grandTotal > 0 ? (g.total / grandTotal * 100).toFixed(1) : 0;
+            const barPct     = grandTotal > 0 ? Math.round(g.total / grandTotal * 100) : 0;
+            const groupId    = `group-${gi}-${Date.now()}`;
+            const groupLabel = g.group === 'other' ? 'Loaded Skills' : g.group;
             const skillRows = g.skills.map(sk => {
                 const skPct = g.total > 0 ? (sk.tokens / g.total * 100).toFixed(1) : 0;
                 const skBar = g.total > 0 ? Math.round(sk.tokens / g.total * 100) : 0;
@@ -717,7 +768,7 @@
                 <div class="group-header" onclick="toggleGroup('${groupId}')">
                     <div>
                         <span class="comp-dot" style="background:${color}"></span>
-                        <span class="group-name">${g.group}</span>
+                        <span class="group-name">${groupLabel}</span>
                         <span class="group-count">(${g.skills.length})</span>
                     </div>
                     <div class="bar-wrap"><div class="bar-fill" style="width:${barPct}%;background:${color}"></div></div>
@@ -866,40 +917,216 @@
             });
     }
 
-    // ── Top Burners ───────────────────────────────────────────────────────────────
-    function loadBurners() {
+    // ── Top Burners + Analytics ───────────────────────────────────────────────────
+    let _activePeriod = 'week';
+    const PERIOD_LABEL = { day: 'last 24 hours', week: 'last 7 days', month: 'last 30 days' };
+
+    function switchPeriod(p) {
+        _activePeriod = p;
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.dataset.period === p));
+        Promise.all([
+            fetch(`/api/analytics?period=${p}`).then(r => r.json()),
+            fetch(`/api/burners?period=${p}`).then(r => r.json()),
+        ]).then(([analytics, burners]) => {
+            renderAnalytics(analytics, p);
+            renderBurnersList(burners, p);
+        }).catch(() => {});
+    }
+
+    function loadStatsPage(period) {
         const panel = document.getElementById('stats-panel');
-        panel.innerHTML = '<div class="loading">loading…</div>';
-        fetch('/api/burners').then(r => r.json()).then(rows => {
-            if (!rows.length) {
-                panel.innerHTML = '<div class="empty-state"><div class="icon">◻</div><div>No session data yet.</div></div>';
-                return;
-            }
-            const maxTok = rows[0].total_tokens;
-            const burnerRows = rows.map((r, i) => {
-                const color  = COLORS[i % COLORS.length];
-                const barPct = Math.round(r.total_tokens / maxTok * 100);
-                return `<div class="burner-row">
-                    <div>
-                        <div class="burner-label" title="${r.label}">${r.label}</div>
-                        <div class="burner-sub">${r.session_count} session${r.session_count !== 1 ? 's' : ''} · avg ${r.avg_tokens.toLocaleString()} tok</div>
-                    </div>
-                    <div class="bar-wrap"><div class="bar-fill" style="width:${barPct}%;background:${color}"></div></div>
-                    <div class="burner-tokens">${r.total_tokens.toLocaleString()} tok</div>
-                    <div class="burner-pct" style="color:${color}">#${i+1}</div>
-                </div>`;
-            }).join('');
-            panel.innerHTML = `
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Biggest context burners — all sessions</span>
-                        <span class="card-badge">${rows.length} components</span>
-                    </div>
-                    <div class="card-body">${burnerRows}</div>
-                </div>`;
+        const activeCls = p => p === period ? ' active' : '';
+        panel.innerHTML = `
+            <div class="period-toggle">
+                <button class="period-btn${activeCls('day')}"   data-period="day"   onclick="switchPeriod('day')">Day</button>
+                <button class="period-btn${activeCls('week')}"  data-period="week"  onclick="switchPeriod('week')">Week</button>
+                <button class="period-btn${activeCls('month')}" data-period="month" onclick="switchPeriod('month')">Month</button>
+            </div>
+            <div id="analytics-section"><div class="loading">loading…</div></div>
+            <div id="burners-section"><div class="loading">loading…</div></div>`;
+
+        Promise.all([
+            fetch(`/api/analytics?period=${period}`).then(r => r.json()),
+            fetch(`/api/burners?period=${period}`).then(r => r.json()),
+        ]).then(([analytics, burners]) => {
+            renderAnalytics(analytics, period);
+            renderBurnersList(burners, period);
         }).catch(() => {
-            panel.innerHTML = '<div class="empty-state"><div class="icon">✕</div><div>Failed to load burners.</div></div>';
+            document.getElementById('analytics-section').innerHTML =
+                '<div class="empty-state"><div class="icon">✕</div><div>Failed to load analytics.</div></div>';
+            document.getElementById('burners-section').innerHTML = '';
         });
+    }
+
+    function renderAnalytics(a, period) {
+        const section = document.getElementById('analytics-section');
+        if (!section) return;
+
+        const peakHourStr = a.peak_hour !== null && a.peak_hour !== undefined
+            ? `${String(a.peak_hour).padStart(2,'0')}:00`
+            : '—';
+        const pressureColor = a.avg_pressure_pct > 80 ? 'var(--warn)' : a.avg_pressure_pct > 50 ? 'var(--mid)' : 'var(--ok)';
+
+        const statCards = `
+            <div class="analytics-grid">
+                <div class="stat-box">
+                    <div class="stat-val">${fmt(a.total_tokens || 0)}</div>
+                    <div class="stat-label">Total tokens</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val">${a.session_count || 0}</div>
+                    <div class="stat-label">Sessions</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val" style="font-size:14px;padding-top:3px">${peakHourStr}</div>
+                    <div class="stat-label">Busiest hour</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val" style="color:${pressureColor}">${a.avg_pressure_pct || 0}%</div>
+                    <div class="stat-label">Avg ctx pressure</div>
+                </div>
+            </div>`;
+
+        section.innerHTML = statCards;
+    }
+
+    function renderBurnersPie(rows) {
+        const R = 44, SW = 13, CX = 60, CY = 60;
+        const circ = 2 * Math.PI * R, GAP = 1.5;
+        const grandTotal = rows.reduce((a, r) => a + r.total_tokens, 0) || 1;
+        const top = rows.slice(0, 8);
+        let offset = 0;
+        const rings = top.map((r, i) => {
+            const color = COLORS[i % COLORS.length];
+            const frac  = r.total_tokens / grandTotal;
+            const dash  = Math.max(0, frac * circ - GAP);
+            const off   = -(offset * circ);
+            offset += frac;
+            return `<circle class="donut-slice" cx="${CX}" cy="${CY}" r="${R}" fill="none"
+                stroke="${color}" stroke-width="${SW}"
+                stroke-dasharray="${dash.toFixed(2)} ${circ.toFixed(2)}"
+                stroke-dashoffset="${off.toFixed(2)}"
+                style="animation-delay:${(i*0.04).toFixed(2)}s">
+                <title>${r.label}: ${r.total_tokens.toLocaleString()} tok</title></circle>`;
+        }).join('');
+        const legend = top.map((r, i) => {
+            const color = COLORS[i % COLORS.length];
+            const pct   = (r.total_tokens / grandTotal * 100).toFixed(1);
+            return `<div class="legend-item">
+                <div class="legend-dot" style="background:${color}"></div>
+                <div class="legend-label" title="${r.label}">${r.label}</div>
+                <div class="legend-pct" style="color:${color}">${pct}%</div>
+            </div>`;
+        }).join('');
+        return `<div class="chart-panel">
+            <div class="donut-wrap">
+                <svg viewBox="0 0 120 120" width="120" height="120" style="transform:rotate(-90deg);display:block">
+                    <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="${SW}"/>
+                    ${rings}
+                </svg>
+                <div class="donut-centre">
+                    <div class="donut-total">${fmt(grandTotal)}</div>
+                    <div class="donut-sub">tokens</div>
+                </div>
+            </div>
+            <div class="donut-legend">${legend}</div>
+        </div>`;
+    }
+
+    const _expandCache = {};
+
+    function toggleBurnerExpand(idx, label, color, period) {
+        const expandId = `bx-${idx}`;
+        const chevId   = `bc-${idx}`;
+        const el  = document.getElementById(expandId);
+        const chv = document.getElementById(chevId);
+        if (!el) return;
+
+        const isOpen = el.classList.contains('open');
+        if (isOpen) {
+            el.classList.remove('open');
+            if (chv) chv.classList.remove('open');
+            return;
+        }
+        el.classList.add('open');
+        if (chv) chv.classList.add('open');
+
+        if (_expandCache[expandId]) { el.innerHTML = _expandCache[expandId]; return; }
+
+        el.innerHTML = '<div style="padding:6px 12px 6px 28px;color:var(--muted);font-size:10px">loading…</div>';
+        fetch(`/api/breakdown?raw_key=${encodeURIComponent(label)}&period=${encodeURIComponent(period)}`)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.items.length) {
+                    el.innerHTML = '<div style="padding:6px 12px 6px 28px;color:var(--muted);font-size:10px">No breakdown available.</div>';
+                    return;
+                }
+                const maxTok = Math.max(...data.items.map(d => d.total_tokens));
+                const html = data.items.map(item => {
+                    const barPct  = Math.round(item.total_tokens / maxTok * 100);
+                    const dispLabel = data.type === 'component'
+                        ? (item.label || '').split('/').pop() || item.label
+                        : item.label;
+                    const sub = data.type === 'group'
+                        ? `${item.session_count} session${item.session_count !== 1 ? 's' : ''} · avg ${(item.avg_tokens||0).toLocaleString()} tok`
+                        : fmtDate(item.last_active);
+                    return `<div class="expand-row">
+                        <div>
+                            <div class="expand-label" title="${item.label}">${dispLabel}</div>
+                            <div class="expand-sub">${sub}</div>
+                        </div>
+                        <div class="expand-bar"><div class="expand-bar-fill" style="width:${barPct}%;background:${color}"></div></div>
+                        <div class="expand-tokens">${item.total_tokens.toLocaleString()} tok</div>
+                    </div>`;
+                }).join('');
+                _expandCache[expandId] = html;
+                el.innerHTML = html;
+            })
+            .catch(() => {
+                el.innerHTML = '<div style="padding:6px 12px 6px 28px;color:var(--muted);font-size:10px">Failed to load.</div>';
+            });
+    }
+
+    function renderBurnersList(rows, period) {
+        const section = document.getElementById('burners-section');
+        if (!section) return;
+        if (!rows.length) {
+            section.innerHTML = '<div class="empty-state"><div class="icon">◻</div><div>No data for this period.</div></div>';
+            return;
+        }
+        const maxTok = rows[0].total_tokens;
+        const pieHtml = renderBurnersPie(rows);
+        const burnerRows = rows.map((r, i) => {
+            const color    = COLORS[i % COLORS.length];
+            const barPct   = Math.round(r.total_tokens / maxTok * 100);
+            const clickable = r.is_group === 1;
+            const safeKey  = (r.raw_key || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            const rowStyle = clickable ? '' : 'style="cursor:default"';
+            const onclick  = clickable ? `onclick="toggleBurnerExpand(${i}, '${safeKey}', '${color}', '${period}')"` : '';
+            const chevron  = clickable ? `<div class="burner-chevron" id="bc-${i}">▶</div>` : '<div></div>';
+            const expand   = clickable ? `<div class="burner-expand" id="bx-${i}"></div>` : '';
+            return `<div class="burner-row" ${rowStyle} ${onclick}>
+                <div>
+                    <div class="burner-label" title="${r.label}">${r.label}</div>
+                    <div class="burner-sub">${r.session_count} session${r.session_count !== 1 ? 's' : ''} · avg ${r.avg_tokens.toLocaleString()} tok</div>
+                </div>
+                <div class="bar-wrap"><div class="bar-fill" style="width:${barPct}%;background:${color}"></div></div>
+                <div class="burner-tokens">${r.total_tokens.toLocaleString()} tok</div>
+                <div class="burner-pct" style="color:${color}">#${i+1}</div>
+                ${chevron}
+            </div>${expand}`;
+        }).join('');
+        section.innerHTML = `
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Biggest context burners — ${PERIOD_LABEL[period] || period}</span>
+                    <span class="card-badge">${rows.length} components</span>
+                </div>
+                <div class="card-body">
+                    ${pieHtml}
+                    ${burnerRows}
+                </div>
+            </div>`;
     }
 
     // ── Periodic refresh ──────────────────────────────────────────────────────────
