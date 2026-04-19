@@ -2,13 +2,14 @@ package com.tokenmaxxer
 
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import com.google.gson.reflect.TypeToken
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.jcef.JBCefBrowser
+import com.intellij.ui.jcef.JBCefJSQuery
 import com.intellij.util.concurrency.AppExecutorUtil
-import java.io.File
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -28,6 +29,13 @@ private data class TokenData(
     val components: List<Component>,
     @SerializedName("skill_groups") val skillGroups: List<SkillGroup>?
 )
+private data class SessionListItem(
+    @SerializedName("session_id") val sessionId: String,
+    @SerializedName("started_at") val startedAt: String,
+    @SerializedName("last_active") val lastActive: String,
+    @SerializedName("is_active") val isActive: Boolean,
+    @SerializedName("has_data") val hasData: Boolean
+)
 
 class TokenMaxxerPanel(private val project: Project) : Disposable {
 
@@ -36,27 +44,36 @@ class TokenMaxxerPanel(private val project: Project) : Disposable {
     private var pollFuture: ScheduledFuture<*>? = null
     private val cliScript: String
 
+    @Volatile private var selectedSessionId: String? = null
+    private val jsQuery: JBCefJSQuery
+
     val component: JComponent get() = browser.component
 
     init {
         cliScript = extractCli()
+
+        jsQuery = JBCefJSQuery.create(browser)
+        jsQuery.addHandler { sessionId ->
+            selectedSessionId = sessionId.takeIf { it.isNotBlank() }
+            AppExecutorUtil.getAppExecutorService().submit { refresh() }
+            null
+        }
+
         browser.loadHTML(loadingHtml())
         Disposer.register(project, this)
     }
 
     private fun extractCli(): String {
-        val tmpDir = File(System.getProperty("java.io.tmpdir"), "tokenmaxxer-plugin")
+        val tmpDir = java.io.File(System.getProperty("java.io.tmpdir"), "tokenmaxxer-plugin")
         tmpDir.mkdirs()
 
-        // Copy cli.py
-        val cliFile = File(tmpDir, "cli.py")
+        val cliFile = java.io.File(tmpDir, "cli.py")
         javaClass.getResourceAsStream("/cli.py")?.use { it.copyTo(cliFile.outputStream()) }
 
-        // Copy tokenmaxxer package
-        val pkgDir = File(tmpDir, "tokenmaxxer")
+        val pkgDir = java.io.File(tmpDir, "tokenmaxxer")
         pkgDir.mkdirs()
         listOf("__init__.py", "analyzer.py", "session_state.py", "visualizer.py", "db.py").forEach { name ->
-            val dest = File(pkgDir, name)
+            val dest = java.io.File(pkgDir, name)
             val stream = javaClass.getResourceAsStream("/tokenmaxxer/$name")
                 ?: throw IllegalStateException("Missing plugin resource: tokenmaxxer/$name")
             stream.use { it.copyTo(dest.outputStream()) }
@@ -82,38 +99,68 @@ class TokenMaxxerPanel(private val project: Project) : Disposable {
         }
     }
 
+    private fun runCli(cwd: String, vararg extraArgs: String): String {
+        val cmd = mutableListOf(resolvePython(), cliScript, "--cwd", cwd) + extraArgs.toList()
+        val process = ProcessBuilder(cmd).redirectErrorStream(true).start()
+        val outputFuture = AppExecutorUtil.getAppExecutorService().submit<String> {
+            process.inputStream.bufferedReader().readText()
+        }
+        val output = try {
+            outputFuture.get(15, TimeUnit.SECONDS)
+        } catch (e: TimeoutException) {
+            process.destroyForcibly()
+            throw IllegalStateException("CLI timed out after 15s")
+        }
+        process.waitFor(5, TimeUnit.SECONDS)
+        return output
+    }
+
     private fun refresh() {
         val cwd = project.basePath ?: return
         try {
-            val process = ProcessBuilder(resolvePython(), cliScript, "--json", "--no-api", "--cwd", cwd)
-                .redirectErrorStream(true)
-                .start()
-            val outputFuture = AppExecutorUtil.getAppExecutorService().submit<String> {
-                process.inputStream.bufferedReader().readText()
+            // Fetch all sessions
+            val sessionsJson = runCli(cwd, "--list-sessions", "--json")
+            val sessionType = object : TypeToken<List<SessionListItem>>() {}.type
+            val sessions: List<SessionListItem> = try {
+                gson.fromJson(sessionsJson, sessionType) ?: emptyList()
+            } catch (_: Exception) { emptyList() }
+
+            // Determine which session to display
+            val displayId = selectedSessionId
+                ?.let { sel -> sessions.find { it.sessionId == sel && it.hasData }?.sessionId }
+                ?: sessions.find { it.isActive && it.hasData }?.sessionId
+                ?: sessions.firstOrNull { it.hasData }?.sessionId
+
+            if (displayId == null) {
+                ApplicationManager.getApplication().invokeLater { browser.loadHTML(noSessionHtml()) }
+                return
             }
-            val output = try {
-                outputFuture.get(15, TimeUnit.SECONDS)
-            } catch (e: TimeoutException) {
-                process.destroyForcibly()
-                throw IllegalStateException("CLI timed out after 15s")
-            }
-            process.waitFor(5, TimeUnit.SECONDS)
+
+            val output = runCli(cwd, "--json", "--no-api", "--session", displayId)
             if (!output.trimStart().startsWith("{")) throw IllegalStateException(output.take(300))
+
             val errCheck = gson.fromJson(output, TokenError::class.java)
-            if (errCheck?.error != null) throw IllegalStateException(errCheck.error)
+            if (errCheck?.error != null) {
+                ApplicationManager.getApplication().invokeLater { browser.loadHTML(noSessionHtml()) }
+                return
+            }
+
             val data = gson.fromJson(output, TokenData::class.java)
-            val html = buildHtml(data)
-            ApplicationManager.getApplication().invokeLater {
-                browser.loadHTML(html)
-            }
+            val html = buildHtml(data, sessions, displayId)
+            ApplicationManager.getApplication().invokeLater { browser.loadHTML(html) }
         } catch (e: Throwable) {
-            ApplicationManager.getApplication().invokeLater {
-                browser.loadHTML(errorHtml(e.message ?: "Unknown error"))
-            }
+            ApplicationManager.getApplication().invokeLater { browser.loadHTML(errorHtml(e.message ?: "Unknown error")) }
         }
     }
 
-    private fun buildHtml(data: TokenData): String {
+    private fun sessionLabel(s: SessionListItem): String {
+        val shortId = s.sessionId.take(8)
+        val timeStr = (s.lastActive.ifBlank { s.startedAt }).take(16).replace("T", " ")
+        val suffix = if (s.isActive) " · active" else ""
+        return "$shortId · $timeStr$suffix"
+    }
+
+    private fun buildHtml(data: TokenData, sessions: List<SessionListItem>, displayedSessionId: String): String {
         val colors = listOf(
             "#4FC3F7", "#81C784", "#FFD54F", "#CE93D8",
             "#FF8A65", "#F06292", "#4DB6AC", "#DCE775"
@@ -154,6 +201,18 @@ class TokenMaxxerPanel(private val project: Project) : Disposable {
 
         val note = if (data.usingEstimates) """<p class="note">* Estimates only — set ANTHROPIC_API_KEY for exact counts.</p>""" else ""
 
+        // Session selector — only render if more than one session has data
+        val sessionsWithData = sessions.filter { it.hasData }
+        val injectJs = jsQuery.inject("document.getElementById('tm-session').value")
+        val sessionSelectHtml = if (sessionsWithData.size > 1) {
+            val options = sessionsWithData.joinToString("") { s ->
+                val selected = if (s.sessionId == displayedSessionId) " selected" else ""
+                """<option value="${s.sessionId}"$selected>${sessionLabel(s)}</option>"""
+            }
+            """<div class="session-wrap"><select class="session-select" id="tm-session">$options</select></div>
+<script>document.getElementById('tm-session').addEventListener('change',function(){$injectJs});</script>"""
+        } else ""
+
         return """<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -161,6 +220,9 @@ class TokenMaxxerPanel(private val project: Project) : Disposable {
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #1e1e1e; color: #ccc; font-family: -apple-system, Arial, sans-serif; font-size: 12px; padding: 10px 12px 12px; }
+.session-wrap { margin-bottom: 8px; }
+.session-select { width: 100%; background: rgba(255,255,255,0.06); color: #ccc; border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; padding: 4px 6px; font-size: 11px; cursor: pointer; }
+.session-select:focus { outline: none; border-color: #4FC3F7; }
 .eyebrow { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; opacity: 0.4; margin-bottom: 8px; }
 .chart-area { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .donut-wrap { position: relative; flex-shrink: 0; width: 100px; height: 100px; }
@@ -193,6 +255,7 @@ body { background: #1e1e1e; color: #ccc; font-family: -apple-system, Arial, sans
 </style>
 </head>
 <body>
+$sessionSelectHtml
 <div class="eyebrow">Token Usage</div>
 <div class="chart-area">
   <div class="donut-wrap">
@@ -222,11 +285,15 @@ $note
     private fun loadingHtml() =
         """<body style="padding:16px;font-family:monospace;color:#888">Loading token data...</body>"""
 
+    private fun noSessionHtml() =
+        """<body style="padding:24px 16px;font-family:monospace;color:#888;text-align:center;opacity:0.6">No active session.<br>Start a Claude Code session<br>to view token usage.</body>"""
+
     private fun errorHtml(msg: String) =
         """<body style="padding:16px;font-family:monospace;color:#f44">Failed to fetch token data:<br><pre>${msg.replace("<", "&lt;")}</pre></body>"""
 
     override fun dispose() {
         pollFuture?.cancel(false)
+        jsQuery.dispose()
         Disposer.dispose(browser)
     }
 }

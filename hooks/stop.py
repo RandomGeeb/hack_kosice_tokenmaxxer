@@ -10,7 +10,7 @@ from tokenmaxxer.db import (
     init_db, get_tool_tokens, update_session_snapshot,
     update_session_meta, replace_context_files,
 )
-from tokenmaxxer.analyzer import analyze
+from tokenmaxxer.analyzer import analyze, write_token_summary
 
 
 def _get_session_meta(transcript_path: str):
@@ -49,25 +49,14 @@ def main():
             "tool_calls":              [],
             "tool_output_tokens":      tool_tokens,
         }
-        components, _ = analyze(cwd, state, use_api=False)
+        components, _ = analyze(cwd, state, use_api=True)
         update_session_snapshot(session_id, components, cwd)
         replace_context_files(session_id, components, cwd)
+        write_token_summary(cwd, session_id, components)
 
         if transcript_path:
             started_at, last_active, model = _get_session_meta(transcript_path)
             update_session_meta(session_id, model, started_at, last_active, cwd)
-
-        # Keep token_summary.txt for the /tokenmaxxer skill command
-        total = sum(components.values())
-        pct   = total / 200_000 * 100
-        biggest = max(components, key=components.get, default="")
-        summary_path = Path(cwd) / ".claude" / "token_summary.txt"
-        summary_path.parent.mkdir(parents=True, exist_ok=True)
-        summary_path.write_text(
-            f"{total:,} / 200,000 tokens ({pct:.1f}%)"
-            + (f" | biggest: {biggest} ({components[biggest]:,} tok)" if biggest else "")
-            + "\nFor full breakdown: python app.py → http://localhost:5000\n"
-        )
     except Exception:
         pass
 

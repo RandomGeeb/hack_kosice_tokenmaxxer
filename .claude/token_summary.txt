@@ -1,2 +1,11 @@
-97,137 / 200,000 tokens (48.6%) | biggest: Conversation History (73,670 tok)
-For full breakdown: python app.py → http://localhost:5000
+Active session: 55f1195e-4987-4a...
+Last updated:   2026-04-19 00:08:22 UTC
+
+  CC Baseline               2,000
+  Memory Files                111
+  Skills/Commands             122
+  Global Skills            21,144
+  Conversation History        733
+  Tool Outputs                474
+  ────────────────────────────────
+  Total                    24,584

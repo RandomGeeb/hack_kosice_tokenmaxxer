@@ -227,3 +227,33 @@ def analyze(cwd: str, state: dict, use_api: bool = True) -> dict:
         components["Tool Outputs"] = tool_output_tokens
 
     return components, skill_groups
+
+
+def format_summary(session_id: str, components: dict) -> str:
+    """Format a token breakdown for token_summary.txt."""
+    from datetime import datetime, timezone
+    total = sum(components.values())
+    width = max((len(k) for k in components), default=20) + 2
+    lines = [
+        f"Active session: {session_id[:16]}...",
+        f"Last updated:   {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')} UTC",
+        "",
+    ]
+    for label, tokens in components.items():
+        lines.append(f"  {label:<{width}} {tokens:>8,}")
+    lines.append(f"  {'─' * (width + 10)}")
+    lines.append(f"  {'Total':<{width}} {total:>8,}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def write_token_summary(cwd: str, session_id: str, components: dict) -> None:
+    summary_path = Path(cwd) / ".claude" / "token_summary.txt"
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text(format_summary(session_id, components))
+
+
+def write_no_session_summary(cwd: str) -> None:
+    summary_path = Path(cwd) / ".claude" / "token_summary.txt"
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
+    summary_path.write_text("No active session.\n")

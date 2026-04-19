@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 hooks/user_prompt_submit.py"
+            "command": "python3 /Users/derricklim/Documents/GitHub/hack_kosice_tokenmaxxer/hooks/user_prompt_submit.py"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 hooks/post_tool_use.py"
+            "command": "python3 /Users/derricklim/Documents/GitHub/hack_kosice_tokenmaxxer/hooks/post_tool_use.py"
           }
         ]
       }
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 hooks/stop.py"
+            "command": "python3 /Users/derricklim/Documents/GitHub/hack_kosice_tokenmaxxer/hooks/stop.py"
           }
         ]
       }

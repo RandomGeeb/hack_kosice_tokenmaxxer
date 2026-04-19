@@ -118,13 +118,44 @@ def update_session_meta(
             )
 
 
-def get_active_session(project_path: str, cwd: str = None) -> Optional[dict]:
+def deactivate_session(session_id: str, cwd: str = None):
     with get_conn(cwd) as conn:
-        row = conn.execute(
-            "SELECT * FROM sessions WHERE project_path=? AND is_active=1 ORDER BY last_active DESC LIMIT 1",
-            (project_path,),
-        ).fetchone()
-        return dict(row) if row else None
+        conn.execute("UPDATE sessions SET is_active=0 WHERE session_id=?", (session_id,))
+
+
+def get_active_session(project_path: str, cwd: str = None) -> Optional[dict]:
+    """Search for an active session, walking up the directory tree across DB files."""
+    seen: set = set()
+    p = Path(cwd or project_path).resolve()
+    while True:
+        db_path = p / ".claude" / "tokenmaxxer.db"
+        key = str(db_path)
+        if key not in seen and db_path.exists():
+            seen.add(key)
+            try:
+                with sqlite3.connect(key) as conn:
+                    conn.row_factory = sqlite3.Row
+                    row = conn.execute(
+                        "SELECT * FROM sessions WHERE project_path=? AND is_active=1 ORDER BY last_active DESC LIMIT 1",
+                        (project_path,),
+                    ).fetchone()
+                    if row:
+                        return dict(row)
+                    row = conn.execute(
+                        """SELECT * FROM sessions WHERE is_active=1
+                           AND ? LIKE project_path || '/%'
+                           ORDER BY length(project_path) DESC, last_active DESC LIMIT 1""",
+                        (project_path,),
+                    ).fetchone()
+                    if row:
+                        return dict(row)
+            except Exception:
+                pass
+        parent = p.parent
+        if parent == p:
+            break
+        p = parent
+    return None
 
 
 def replace_context_files(session_id: str, components: dict, cwd: str = None):

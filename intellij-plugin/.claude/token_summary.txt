@@ -1,2 +1,9 @@
-23,522 / 200,000 tokens (11.8%) | Global Skills: 89.9% | Tool Outputs: 0.4% | Conversation History: 1.2%
-For per-skill detail, see the VS Code Token Breakdown panel.
+Active session: 66d98c3a-db6c-48...
+Last updated:   2026-04-19 00:04:52 UTC
+
+  CC Baseline               2,000
+  Global Skills            21,144
+  Conversation History     37,555
+  Tool Outputs                500
+  ────────────────────────────────
+  Total                    61,199

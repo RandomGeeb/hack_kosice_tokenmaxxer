@@ -7,7 +7,11 @@
       "Bash(sqlite3 /Users/derricklim/Documents/GitHub/hack_kosice_tokenmaxxer/.claude/tokenmaxxer.db \".tables\")",
       "Bash(sqlite3 /Users/derricklim/Documents/GitHub/hack_kosice_tokenmaxxer/.claude/tokenmaxxer.db \"SELECT session_id, project_path, started_at, last_active FROM sessions LIMIT 5;\")",
       "Bash(python3 *)",
-      "Bash(sqlite3 /Users/derricklim/Documents/GitHub/hack_kosice_tokenmaxxer/.claude/tokenmaxxer.db \"DELETE FROM context_files WHERE session_id='test-smoke'; DELETE FROM sessions WHERE session_id='test-smoke';\")"
+      "Bash(sqlite3 /Users/derricklim/Documents/GitHub/hack_kosice_tokenmaxxer/.claude/tokenmaxxer.db \"DELETE FROM context_files WHERE session_id='test-smoke'; DELETE FROM sessions WHERE session_id='test-smoke';\")",
+      "Bash(sqlite3 *)",
+      "Bash(./gradlew compileKotlin)",
+      "Bash(python *)",
+      "Bash(.venv/bin/python *)"
     ]
   },
   "hooks": {

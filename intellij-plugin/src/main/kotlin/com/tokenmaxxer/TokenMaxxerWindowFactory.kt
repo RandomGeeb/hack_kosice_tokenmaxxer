@@ -14,4 +14,4 @@ class TokenMaxxerWindowFactory : ToolWindowFactory {
     }
 
     override fun shouldBeAvailable(project: Project) = true
-}/
+}

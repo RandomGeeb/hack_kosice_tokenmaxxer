@@ -2,11 +2,12 @@
 import json
 import os
 import sys
+from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tokenmaxxer.db import init_db, save_session, set_session_active, get_tool_tokens, update_session_snapshot
-from tokenmaxxer.analyzer import analyze
+from tokenmaxxer.analyzer import analyze, write_token_summary
 
 
 def main():
@@ -21,8 +22,13 @@ def main():
 
         init_db(cwd)
         save_session(
-            {"session_id": session_id, "project_path": cwd,
-             "started_at": "", "last_active": "", "model": ""},
+            {
+                "session_id": session_id,
+                "project_path": cwd,
+                "started_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "last_active": "",
+                "model": "",
+            },
             cwd,
         )
         set_session_active(session_id, cwd, cwd)
@@ -37,8 +43,9 @@ def main():
             "tool_calls": [],
             "tool_output_tokens": tool_tokens,
         }
-        components, _ = analyze(cwd, state, use_api=False)
+        components, _ = analyze(cwd, state, use_api=True)
         update_session_snapshot(session_id, components, cwd)
+        write_token_summary(cwd, session_id, components)
     except Exception:
         pass
 

@@ -39,6 +39,36 @@ function fetchData(cwd) {
   });
 }
 
+function getNoSessionContent() {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline';" />
+  <style>
+    body {
+      background: var(--vscode-sideBar-background, #1e1e1e);
+      color: var(--vscode-foreground, #ccc);
+      font-family: var(--vscode-font-family, -apple-system, sans-serif);
+      font-size: 12px;
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      opacity: 0.5;
+    }
+    .icon { font-size: 28px; }
+    .msg { text-align: center; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="icon">⬡</div>
+  <div class="msg">No active session.<br>Start a Claude Code session<br>to view token usage.</div>
+</body>
+</html>`;
+}
+
 function getWebviewContent(data) {
   const COLORS = [
     "#4FC3F7", "#81C784", "#FFD54F", "#CE93D8",
@@ -223,6 +253,10 @@ class TokenMaxxerViewProvider {
     if (!this._view) return;
     try {
       const data = await fetchData(cwd);
+      if (data.error) {
+        this._view.webview.html = getNoSessionContent();
+        return data;
+      }
       this._view.webview.html = getWebviewContent(data);
       return data;
     } catch (e) {
@@ -269,6 +303,11 @@ function activate(context) {
     if (!cwd) return;
     try {
       const data = await fetchData(cwd);
+      if (data.error) {
+        statusItem.text = `$(graph) ctx — no session`;
+        if (provider.hasView) await provider.refresh(cwd);
+        return;
+      }
       const pct = data.pct_of_context;
       statusItem.text = `$(graph) ctx ${buildMiniBar(pct)} ${pct}%`;
       if (provider.hasView) await provider.refresh(cwd);

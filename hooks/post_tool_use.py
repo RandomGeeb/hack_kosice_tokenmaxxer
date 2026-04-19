@@ -6,7 +6,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tokenmaxxer.db import add_tool_tokens, get_tool_tokens, update_session_snapshot
-from tokenmaxxer.analyzer import analyze
+from tokenmaxxer.analyzer import analyze, write_token_summary
 
 
 def _extract_text(tool_response) -> str:
@@ -41,8 +41,9 @@ def main():
             "tool_calls": [],
             "tool_output_tokens": tool_tokens,
         }
-        components, _ = analyze(cwd, state, use_api=False)
+        components, _ = analyze(cwd, state, use_api=True)
         update_session_snapshot(session_id, components, cwd)
+        write_token_summary(cwd, session_id, components)
     except Exception:
         pass
 
