@@ -42,16 +42,16 @@ def main():
 
         tool_tokens = get_tool_tokens(session_id, cwd)
         state = {
-            "session_id":              session_id,
-            "transcript_path":         transcript_path,
-            "last_user_message":       "",
+            "session_id":               session_id,
+            "transcript_path":          transcript_path,
+            "last_user_message":        "",
             "last_user_message_tokens": 0,
-            "tool_calls":              [],
-            "tool_output_tokens":      tool_tokens,
+            "tool_calls":               [],
+            "tool_output_tokens":       tool_tokens,
         }
-        components, _ = analyze(cwd, state, use_api=True)
+        components, skill_groups = analyze(cwd, state, use_api=True)
         update_session_snapshot(session_id, components, cwd)
-        replace_context_files(session_id, components, cwd)
+        replace_context_files(session_id, components, skill_groups, cwd)
         write_token_summary(cwd, session_id, components)
 
         if transcript_path:
