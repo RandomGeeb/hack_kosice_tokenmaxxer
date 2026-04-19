@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tokenmaxxer.db import (
     init_db, get_tool_tokens, update_session_snapshot,
-    update_session_meta, replace_context_files,
+    update_session_meta, replace_context_files, write_turn,
 )
 from tokenmaxxer.analyzer import analyze, write_token_summary
 
@@ -52,6 +52,7 @@ def main():
         components, skill_groups = analyze(cwd, state, use_api=True)
         update_session_snapshot(session_id, components, cwd)
         replace_context_files(session_id, components, skill_groups, cwd)
+        write_turn(session_id, sum(components.values()), cwd)
         write_token_summary(cwd, session_id, components)
 
         if transcript_path:

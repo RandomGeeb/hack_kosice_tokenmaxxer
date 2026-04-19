@@ -11,7 +11,11 @@
       "Bash(sqlite3 *)",
       "Bash(./gradlew compileKotlin)",
       "Bash(python *)",
-      "Bash(.venv/bin/python *)"
+      "Bash(.venv/bin/python *)",
+      "Bash(lsof *)",
+      "Bash(open *)",
+      "Bash(disown)",
+      "Bash(FLASK_RUN_PORT=5001 .venv/bin/python *)"
     ]
   },
   "hooks": {

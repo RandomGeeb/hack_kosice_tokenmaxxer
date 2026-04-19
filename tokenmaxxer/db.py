@@ -42,6 +42,13 @@ def init_db(cwd: str = None):
                                waste_reason  TEXT,
                                group_name    TEXT
                                );
+                           CREATE TABLE IF NOT EXISTS turns (
+                               id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                               session_id   TEXT REFERENCES sessions(session_id),
+                               turn_index   INTEGER,
+                               total_tokens INTEGER,
+                               timestamp    TEXT
+                           );
                            """)
         # Migrate existing DBs that predate these columns
         for col, defn in [
@@ -123,6 +130,19 @@ def update_session_meta(
                 "UPDATE sessions SET last_active=? WHERE session_id=?",
                 (last_active, session_id),
             )
+
+
+def write_turn(session_id: str, total_tokens: int, cwd: str = None):
+    with get_conn(cwd) as conn:
+        row = conn.execute(
+            "SELECT COALESCE(MAX(turn_index), -1) FROM turns WHERE session_id=?",
+            (session_id,),
+        ).fetchone()
+        next_index = (row[0] if row else -1) + 1
+        conn.execute(
+            "INSERT INTO turns (session_id, turn_index, total_tokens, timestamp) VALUES (?, ?, ?, datetime('now'))",
+            (session_id, next_index, total_tokens),
+        )
 
 
 def deactivate_session(session_id: str, cwd: str = None):

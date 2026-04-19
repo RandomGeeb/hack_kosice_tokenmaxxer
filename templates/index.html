@@ -761,10 +761,10 @@
         const compHtml   = renderComponents(components, data.total);
         const skillHtml  = renderSkillGroups(skillGroups, data.total);
         const donutHtml  = renderDonut(components, skillGroups, data.total, pct, color);
-        const costHtml   = renderCostCard(data.total);
 
         fetchPressure(s.session_id, pts => {
             const chartHtml = renderPressureChart(pts);
+            const costHtml  = renderCostCard(data.total);
             document.getElementById('live-panel').innerHTML = `
                 <div class="stat-grid">
                     <div class="stat-box"><div class="stat-val">${fmt(data.total)}</div><div class="stat-label">Tokens used</div></div>

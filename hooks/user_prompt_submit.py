@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from tokenmaxxer.db import init_db, save_session, set_session_active, get_tool_tokens, update_session_snapshot
+from tokenmaxxer.db import init_db, save_session, set_session_active, get_tool_tokens, update_session_snapshot, write_turn
 from tokenmaxxer.analyzer import analyze, write_token_summary
 
 
@@ -45,6 +45,7 @@ def main():
         }
         components, _ = analyze(cwd, state, use_api=True)
         update_session_snapshot(session_id, components, cwd)
+        write_turn(session_id, sum(components.values()), cwd)
         write_token_summary(cwd, session_id, components)
     except Exception:
         pass
