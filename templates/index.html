@@ -62,9 +62,7 @@
           animation: pulse 2s infinite;
         }
         .live-dot.inactive { background: var(--muted); animation: none; }
-        @keyframes pulse {
-          0%,100% { opacity: 1; } 50% { opacity: 0.3; }
-        }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
         .header-stats { margin-left: auto; display: flex; gap: 24px; }
         .hstat { display: flex; flex-direction: column; align-items: flex-end; }
         .hstat-val { font-size: 14px; font-weight: 600; color: var(--accent2); }
@@ -107,13 +105,12 @@
         .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
         .stat-val { font-family: var(--sans); font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 5px; }
-        .stat-val.warn { color: var(--warn); }
-        .stat-val.ok   { color: var(--ok); }
         .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
 
         .ctx-bar-wrap { background: var(--border); border-radius: 4px; height: 8px; overflow: hidden; margin: 4px 0 2px; }
         .ctx-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s cubic-bezier(0.16,1,0.3,1); }
 
+        /* Component rows */
         .comp-row { display: grid; grid-template-columns: 160px 1fr 72px 44px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
         .comp-row:last-child { border-bottom: none; }
         .comp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; margin-right: 6px; }
@@ -123,6 +120,32 @@
         .comp-tokens { text-align: right; font-size: 11px; color: var(--muted); white-space: nowrap; }
         .comp-pct { text-align: right; font-size: 11px; font-weight: 600; }
 
+        /* Skill group rows */
+        .group-row { border-bottom: 1px solid var(--border); }
+        .group-row:last-child { border-bottom: none; }
+        .group-header {
+          display: grid; grid-template-columns: 160px 1fr 72px 44px 20px;
+          gap: 8px; align-items: center; padding: 6px 0;
+          cursor: pointer; user-select: none;
+        }
+        .group-header:hover .group-name { color: var(--text); }
+        .group-name { font-size: 12px; font-weight: 600; }
+        .group-count { font-size: 10px; color: var(--muted); margin-left: 4px; }
+        .group-chevron { font-size: 10px; color: var(--muted); text-align: center; transition: transform 0.2s; display: inline-block; }
+        .group-chevron.open { transform: rotate(90deg); }
+        .group-skills { display: none; padding: 4px 0 4px 24px; background: rgba(255,255,255,0.015); border-top: 1px solid var(--border); }
+        .group-skills.open { display: block; }
+        .skill-row {
+          display: grid; grid-template-columns: 160px 1fr 72px 44px;
+          gap: 8px; align-items: center; padding: 4px 0;
+          border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .skill-row:last-child { border-bottom: none; }
+        .skill-name { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .skill-tokens { text-align: right; font-size: 10px; color: var(--muted); }
+        .skill-pct { text-align: right; font-size: 10px; color: var(--muted); }
+
+        /* Burner rows */
         .burner-row { display: grid; grid-template-columns: 180px 1fr 80px 36px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
         .burner-row:last-child { border-bottom: none; }
         .burner-label { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -140,16 +163,6 @@
         }
         .waiting-banner .icon { font-size: 28px; opacity: 0.4; }
         .waiting-banner .title { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--text); }
-
-        .session-detail-header {
-          display: flex; align-items: center; gap: 12px; margin-bottom: 4px;
-        }
-        .back-btn {
-          font-size: 11px; color: var(--muted); cursor: pointer; padding: 4px 8px;
-          border: 1px solid var(--border2); border-radius: 5px; transition: all 0.15s;
-          background: none; font-family: var(--mono);
-        }
-        .back-btn:hover { color: var(--text); border-color: var(--accent); }
     </style>
 </head>
 <body>
@@ -170,12 +183,9 @@
     <div id="session-list"><div class="loading">loading…</div></div>
 </aside>
 <main>
-    <!-- LIVE PAGE -->
     <div class="page active" id="page-live">
         <div id="live-panel"><div class="loading">connecting…</div></div>
     </div>
-
-    <!-- HISTORY PAGE -->
     <div class="page" id="page-history">
         <div id="history-panel">
             <div class="empty-state">
@@ -184,8 +194,6 @@
             </div>
         </div>
     </div>
-
-    <!-- STATS PAGE -->
     <div class="page" id="page-stats">
         <div id="stats-panel"><div class="loading">loading…</div></div>
     </div>
@@ -195,7 +203,6 @@
     const COLORS = ["#7c6af7","#4fc3a1","#FFD54F","#FF8A65","#F06292","#4DB6AC","#DCE775","#CE93D8"];
     const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n);
     const fmtDate = s => s ? new Date(s).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
-
     function pressureColor(pct) {
         if (pct > 80) return 'var(--warn)';
         if (pct > 50) return 'var(--mid)';
@@ -211,8 +218,6 @@
         if (matchingTab) matchingTab.classList.add('active');
         if (name === 'stats') loadBurners();
     }
-
-    // Wire up tab clicks
     document.getElementById('tab-nav').addEventListener('click', e => {
         const tab = e.target.closest('.tab');
         if (tab && tab.dataset.page) showPage(tab.dataset.page);
@@ -227,16 +232,12 @@
     }
     refreshStats();
 
-    // ── Sidebar session list ──────────────────────────────────────────────────────
+    // ── Sidebar ───────────────────────────────────────────────────────────────────
     let activeSessionId = null;
-
     function buildSidebar(sessions) {
         const list = document.getElementById('session-list');
         list.innerHTML = '';
-        if (!sessions.length) {
-            list.innerHTML = '<div class="loading">no sessions yet</div>';
-            return;
-        }
+        if (!sessions.length) { list.innerHTML = '<div class="loading">no sessions yet</div>'; return; }
         sessions.forEach(s => {
             const name  = (s.project_path || '').split('/').pop() || s.session_id.slice(0,8);
             const total = s.total_tokens || 0;
@@ -260,7 +261,6 @@
             list.appendChild(el);
         });
     }
-
     function refreshSidebar() {
         fetch('/api/sessions').then(r => r.json()).then(buildSidebar).catch(() => {});
     }
@@ -301,16 +301,11 @@
         const project = (s.project_path || '').split('/').pop() || 'unknown';
         document.getElementById('live-panel').innerHTML = `
             <div class="stat-grid">
-                <div class="stat-box">
-                    <div class="stat-val">${fmt(data.total)}</div>
-                    <div class="stat-label">Tokens used</div>
-                </div>
+                <div class="stat-box"><div class="stat-val">${fmt(data.total)}</div><div class="stat-label">Tokens used</div></div>
                 <div class="stat-box">
                     <div class="stat-val" style="color:${color}">${pct}%</div>
                     <div class="stat-label">Context pressure</div>
-                    <div class="ctx-bar-wrap" style="margin-top:8px">
-                        <div class="ctx-bar-fill" style="width:${pct}%;background:${color}"></div>
-                    </div>
+                    <div class="ctx-bar-wrap" style="margin-top:8px"><div class="ctx-bar-fill" style="width:${pct}%;background:${color}"></div></div>
                 </div>
                 <div class="stat-box">
                     <div class="stat-val" style="font-size:15px">${project}</div>
@@ -326,14 +321,55 @@
                 <div class="card-body">${renderComponents(data.components, data.total)}</div>
             </div>`;
     }
-
     function pollLive() {
         fetch('/api/current').then(r => r.json()).then(renderLive).catch(() => {});
     }
     pollLive();
     setInterval(pollLive, 5000);
 
+    // ── Skill group toggle ────────────────────────────────────────────────────────
+    function toggleGroup(id) {
+        const el   = document.getElementById(id);
+        const chev = document.getElementById('chevron-' + id);
+        el.classList.toggle('open');
+        chev.classList.toggle('open');
+    }
+
     // ── History detail ────────────────────────────────────────────────────────────
+    function renderSkillGroups(skillGroups, grandTotal) {
+        if (!skillGroups || !skillGroups.length) return '';
+        return skillGroups.map((g, gi) => {
+            const color   = COLORS[(gi + 4) % COLORS.length];
+            const pct     = grandTotal > 0 ? (g.total / grandTotal * 100).toFixed(1) : 0;
+            const barPct  = grandTotal > 0 ? Math.round(g.total / grandTotal * 100) : 0;
+            const groupId = `group-${gi}`;
+            const skillRows = g.skills.map(sk => {
+                const skPct = g.total > 0 ? (sk.tokens / g.total * 100).toFixed(1) : 0;
+                const skBar = g.total > 0 ? Math.round(sk.tokens / g.total * 100) : 0;
+                return `<div class="skill-row">
+                    <div class="skill-name" title="${sk.label}">${sk.label}</div>
+                    <div class="bar-wrap"><div class="bar-fill" style="width:${skBar}%;background:${color};opacity:0.5"></div></div>
+                    <div class="skill-tokens">${sk.tokens.toLocaleString()} tok</div>
+                    <div class="skill-pct">${skPct}%</div>
+                </div>`;
+            }).join('');
+            return `<div class="group-row">
+                <div class="group-header" onclick="toggleGroup('${groupId}')">
+                    <div>
+                        <span class="comp-dot" style="background:${color}"></span>
+                        <span class="group-name">${g.group}</span>
+                        <span class="group-count">(${g.skills.length})</span>
+                    </div>
+                    <div class="bar-wrap"><div class="bar-fill" style="width:${barPct}%;background:${color}"></div></div>
+                    <div class="comp-tokens">${g.total.toLocaleString()} tok</div>
+                    <div class="comp-pct" style="color:${color}">${pct}%</div>
+                    <div class="group-chevron" id="chevron-${groupId}">▶</div>
+                </div>
+                <div class="group-skills" id="${groupId}">${skillRows}</div>
+            </div>`;
+        }).join('');
+    }
+
     function loadSessionDetail(id) {
         const panel = document.getElementById('history-panel');
         panel.innerHTML = '<div class="loading">loading…</div>';
@@ -344,31 +380,40 @@
                     panel.innerHTML = `<div class="empty-state"><div class="big">✕</div><div>${d.error}</div></div>`;
                     return;
                 }
-                const s          = d.session;
-                const components = d.components || [];
-                const total      = components.reduce((a, c) => a + (c.tokens || 0), 0);
-                const pct        = total > 0 ? Math.round(total / 200000 * 100) : 0;
-                const pctColor   = pressureColor(pct);
-                const project    = (s.project_path || '').split('/').pop() || s.session_id.slice(0, 8);
-                const compRows   = renderComponents(
-                    components.map(c => ({
-                        ...c,
-                        pct: total > 0 ? +(c.tokens / total * 100).toFixed(1) : 0,
-                    })),
-                    total
-                );
+                const s           = d.session;
+                const components  = d.components  || [];
+                const skillGroups = d.skill_groups || [];
+                const compTotal   = components.reduce((a, c) => a + (c.tokens || 0), 0);
+                const skillTotal  = skillGroups.reduce((a, g) => a + g.total, 0);
+                const grandTotal  = compTotal + skillTotal;
+                const pct         = grandTotal > 0 ? Math.round(grandTotal / 200000 * 100) : 0;
+                const pctColor    = pressureColor(pct);
+                const project     = (s.project_path || '').split('/').pop() || s.session_id.slice(0,8);
+                const maxTok      = Math.max(...components.map(c => c.tokens), ...skillGroups.map(g => g.total), 1);
+                const totalComponentCount = components.length + skillGroups.reduce((a, g) => a + g.skills.length, 0);
+
+                const compRows = components.map((c, i) => {
+                    const color  = COLORS[i % COLORS.length];
+                    const barPct = Math.round(c.tokens / maxTok * 100);
+                    const cpct   = grandTotal > 0 ? (c.tokens / grandTotal * 100).toFixed(1) : 0;
+                    return `<div class="comp-row">
+                        <div><span class="comp-dot" style="background:${color}"></span><span class="comp-label" title="${c.label}">${c.label}</span></div>
+                        <div class="bar-wrap"><div class="bar-fill" style="width:${barPct}%;background:${color}"></div></div>
+                        <div class="comp-tokens">${c.tokens.toLocaleString()} tok</div>
+                        <div class="comp-pct" style="color:${color}">${cpct}%</div>
+                    </div>`;
+                }).join('');
+
+                const skillHtml = renderSkillGroups(skillGroups, grandTotal);
+                const noData    = !compRows && !skillHtml;
+
                 panel.innerHTML = `
                     <div class="stat-grid">
-                        <div class="stat-box">
-                            <div class="stat-val">${fmt(total)}</div>
-                            <div class="stat-label">Total tokens</div>
-                        </div>
+                        <div class="stat-box"><div class="stat-val">${fmt(grandTotal)}</div><div class="stat-label">Total tokens</div></div>
                         <div class="stat-box">
                             <div class="stat-val" style="color:${pctColor}">${pct}%</div>
                             <div class="stat-label">Peak ctx pressure</div>
-                            <div class="ctx-bar-wrap" style="margin-top:8px">
-                                <div class="ctx-bar-fill" style="width:${pct}%;background:${pctColor}"></div>
-                            </div>
+                            <div class="ctx-bar-wrap" style="margin-top:8px"><div class="ctx-bar-fill" style="width:${pct}%;background:${pctColor}"></div></div>
                         </div>
                         <div class="stat-box">
                             <div class="stat-val" style="font-size:15px">${project}</div>
@@ -379,10 +424,10 @@
                     <div class="card">
                         <div class="card-header">
                             <span class="card-title">Context breakdown</span>
-                            <span style="font-size:11px;color:var(--muted)">${fmtDate(s.last_active)} · ${components.length} files</span>
+                            <span style="font-size:11px;color:var(--muted)">${fmtDate(s.last_active)} · ${totalComponentCount} components</span>
                         </div>
                         <div class="card-body">
-                            ${compRows || '<div style="color:var(--muted)">No breakdown recorded yet.</div>'}
+                            ${noData ? '<div style="color:var(--muted)">No breakdown recorded yet.</div>' : compRows + skillHtml}
                         </div>
                     </div>`;
             })
