@@ -141,8 +141,8 @@
         }
 
         /* ── Main area ────────────────────────────────────────────────────────── */
-        main { overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--bg); }
-        .page { display: none; flex-direction: column; gap: 12px; }
+        main { overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; background: var(--bg); }
+        .page { display: none; flex-direction: column; gap: 20px; }
         .page.active { display: flex; }
 
         .empty-state {
@@ -152,10 +152,10 @@
         .empty-state .icon { font-size: 24px; opacity: 0.3; }
 
         /* ── Stat grid ────────────────────────────────────────────────────────── */
-        .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
         .stat-box {
           background: var(--surface); border: 1px solid var(--border);
-          border-radius: 2px; padding: 12px 14px;
+          border-radius: 2px; padding: 16px 18px;
         }
         .stat-val { font-size: 20px; font-weight: 700; color: var(--text-strong); line-height: 1; margin-bottom: 4px; }
         .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
@@ -181,7 +181,7 @@
           background: var(--border); border-radius: 2px;
           padding: 1px 6px;
         }
-        .card-body { padding: 0; }
+        .card-body { padding: 0; display: flex; flex-direction: column; gap: 1px; }
 
         /* ── Component rows ───────────────────────────────────────────────────── */
         .comp-row {
@@ -332,11 +332,11 @@
         /* ── Donut chart ──────────────────────────────────────────────────────── */
         .chart-panel {
           display: flex; align-items: center; gap: 24px;
-          padding: 18px 20px 14px;
+          padding: 24px 24px 20px;
           border-bottom: 1px solid var(--border);
           background: var(--bg);
         }
-        .donut-wrap { position: relative; flex-shrink: 0; width: 120px; height: 120px; }
+        .donut-wrap { position: relative; flex-shrink: 0; width: 180px; height: 180px; }
         .donut-wrap svg { transform: rotate(-90deg); display: block; }
         .donut-centre {
           position: absolute; inset: 0;
@@ -349,8 +349,8 @@
         .donut-legend { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; align-content: center; min-width: 0; }
         .legend-item { display: flex; align-items: center; gap: 6px; min-width: 0; }
         .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-        .legend-label { font-size: 10px; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .legend-pct { font-size: 10px; font-weight: 600; flex-shrink: 0; }
+        .legend-label { font-size: 13px; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .legend-pct { font-size: 13px; font-weight: 600; flex-shrink: 0; }
         @keyframes slice-in { from { opacity: 0; } to { opacity: 1; } }
         .donut-slice { animation: slice-in 0.4s ease both; }
 
@@ -378,8 +378,8 @@
         .currency-btn:first-child { border-radius: 2px 0 0 2px; }
         .currency-btn:last-child  { border-radius: 0 2px 2px 0; }
         .currency-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-        .cost-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
-        .cost-box { padding: 14px 16px; border-right: 1px solid var(--border); }
+        .cost-grid { display: grid; grid-template-columns: 1fr; }
+        .cost-box { padding: 18px 20px; border-right: 1px solid var(--border); }
         .cost-box:last-child { border-right: none; }
         .cost-val { font-size: 18px; font-weight: 700; color: var(--accent2); line-height: 1; margin-bottom: 4px; }
         .cost-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
@@ -432,7 +432,7 @@
         }
         .pressure-chart-meta { font-size: 10px; color: var(--muted); }
         .pressure-chart-body { padding: 8px 12px 10px; }
-        .pressure-chart-body svg { display: block; width: 100%; overflow: visible; }
+        .pressure-chart-body svg { overflow: visible; }
     </style>
 </head>
 <body>
@@ -602,7 +602,7 @@
                                     'background:rgba(86,163,126,0.12);color:var(--ok)';
         return `<div class="chart-panel">
             <div class="donut-wrap">
-                <svg viewBox="0 0 120 120" width="120" height="120">
+                <svg viewBox="0 0 120 120" width="180" height="180">
                     <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="${SW}"/>
                     ${rings}
                 </svg>
@@ -647,21 +647,9 @@
 
     function updateCostValues() {
         const c = _costCurrency, m = _costModel;
-        const sessEl    = document.getElementById('cost-session');
-        const dailyEl   = document.getElementById('cost-daily');
-        const monthlyEl = document.getElementById('cost-monthly');
-        const monthSubEl= document.getElementById('cost-monthly-sub');
+        const sessEl = document.getElementById('cost-session');
         if (!sessEl) return;
         sessEl.textContent = fmtCost(tokCost(_costTokens, m, c), c);
-        dailyEl.textContent = fmtCost(tokCost(_costTokens, m, c) * 1, c); // 1 session/day estimate
-        const proj = monthlyProjection(c, m);
-        if (proj) {
-            monthlyEl.textContent = fmtCost(proj.cost, c);
-            monthSubEl.textContent = `based on ${proj.sessions} sessions / ${proj.days}d`;
-        } else {
-            monthlyEl.textContent = '—';
-            monthSubEl.textContent = 'no session history';
-        }
     }
 
     function renderCostCard(tokens) {
@@ -670,13 +658,9 @@
             `<option value="${k}"${k === _costModel ? ' selected' : ''}>${k}</option>`).join('');
         const curBtns = ['EUR','GBP','USD'].map(c =>
             `<button class="currency-btn${c === _costCurrency ? ' active' : ''}" onclick="setCurrency('${c}')">${SYM[c]}</button>`).join('');
-        const proj = monthlyProjection(_costCurrency, _costModel);
-        const sessionCost  = fmtCost(tokCost(tokens, _costModel, _costCurrency), _costCurrency);
-        const dailyCost    = fmtCost(tokCost(tokens, _costModel, _costCurrency), _costCurrency);
-        const monthlyCost  = proj ? fmtCost(proj.cost, _costCurrency) : '—';
-        const monthlySub   = proj ? `based on ${proj.sessions} sessions / ${proj.days}d` : 'no session history';
+        const sessionCost = fmtCost(tokCost(tokens, _costModel, _costCurrency), _costCurrency);
 
-        return `<div class="card">
+        return `<div class="card" style="margin-top:28px">
             <div class="card-header">
                 <span class="card-title">Cost estimator</span>
                 <span class="card-badge">input tokens only</span>
@@ -691,16 +675,6 @@
                     <div class="cost-val" id="cost-session">${sessionCost}</div>
                     <div class="cost-label">This session</div>
                     <div class="cost-sub">${(tokens/1000).toFixed(1)}k tokens</div>
-                </div>
-                <div class="cost-box">
-                    <div class="cost-val" id="cost-daily">${dailyCost}</div>
-                    <div class="cost-label">Est. daily</div>
-                    <div class="cost-sub">1 session/day</div>
-                </div>
-                <div class="cost-box">
-                    <div class="cost-val" id="cost-monthly">${monthlyCost}</div>
-                    <div class="cost-label">Projected / month</div>
-                    <div class="cost-sub" id="cost-monthly-sub">${monthlySub}</div>
                 </div>
             </div>
         </div>`;
@@ -717,7 +691,7 @@
     }
 
     // ── Pressure line chart ───────────────────────────────────────────────────────
-    const CHART_W = 500, CHART_H = 80, CHART_PAD = { t: 8, r: 8, b: 18, l: 32 };
+    const CHART_W = 500, CHART_H = 260, CHART_PAD = { t: 8, r: 8, b: 28, l: 36 };
     const CW = CHART_W - CHART_PAD.l - CHART_PAD.r;
     const CH = CHART_H - CHART_PAD.t - CHART_PAD.b;
 
@@ -773,6 +747,18 @@
             </circle>`;
         }).join('');
 
+        // x-axis labels (up to 8 evenly spaced turn numbers)
+        const xCount = Math.min(recent.length, 8);
+        const xLabels = Array.from({length: xCount}, (_, i) => {
+            const idx = Math.round(i * (recent.length - 1) / Math.max(xCount - 1, 1));
+            const pt  = recent[idx];
+            return `<text x="${toX(pt.turn).toFixed(1)}" y="${(CHART_H - 6).toFixed(1)}" text-anchor="middle" fill="rgba(111,115,122,0.8)" font-size="8">t${pt.turn}</text>`;
+        }).join('');
+
+        // x-axis baseline
+        const baselineY = (CHART_PAD.t + CH).toFixed(1);
+        const xAxis = `<line x1="${CHART_PAD.l}" y1="${baselineY}" x2="${CHART_PAD.l + CW}" y2="${baselineY}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`;
+
         const latest = recent[recent.length - 1];
         const latestColor = latest.pct > 80 ? 'var(--warn)' : latest.pct > 50 ? 'var(--mid)' : 'var(--ok)';
 
@@ -782,11 +768,13 @@
                 <span class="pressure-chart-meta" style="color:${latestColor}">${latest.pct}% now · ${fmt(latest.tokens)} tok</span>
             </div>
             <div class="pressure-chart-body">
-                <svg viewBox="0 0 ${CHART_W} ${CHART_H}" height="${CHART_H}">
+                <svg viewBox="0 0 ${CHART_W} ${CHART_H}" style="width:50%;display:block;margin:0 auto">
                     ${gridLines}
+                    ${xAxis}
                     ${area}
                     ${polylines}
                     ${dots}
+                    ${xLabels}
                 </svg>
             </div>
         </div>`;
@@ -904,7 +892,7 @@
                 </div>
                 ${costHtml}
                 ${chartHtml}
-                <div class="card">
+                <div class="card" style="margin-top:28px">
                     <div class="card-header">
                         <span class="card-title">Context breakdown</span>
                         <span class="card-badge">${totalCount} components</span>
@@ -958,7 +946,7 @@
                 </div>
             </div>
             ${costHtml}
-            <div class="card">
+            <div class="card" style="margin-top:28px">
                 <div class="card-header">
                     <span class="card-title">Context breakdown</span>
                     <span class="card-badge">${fmtDate(s.last_active)} · ${totalCount} components</span>
@@ -1030,6 +1018,96 @@
         });
     }
 
+    function renderSessionTimeline(period) {
+        const now = Date.now();
+        const cutoffs = { day: 86400e3, week: 7*86400e3, month: 30*86400e3 };
+        const cutoff  = now - (cutoffs[period] || cutoffs.week);
+        const sessions = (window._allSessions || [])
+            .filter(s => s.last_active && new Date(s.last_active).getTime() >= cutoff)
+            .sort((a, b) => new Date(a.last_active) - new Date(b.last_active));
+
+        if (sessions.length < 1) return '';
+
+        const CTX_MAX = 200000;
+        const W = 500, H = 180, PAD = { t: 10, r: 12, b: 32, l: 40 };
+        const cw = W - PAD.l - PAD.r, ch = H - PAD.t - PAD.b;
+
+        // X axis spans the full period window, not just session range
+        const minT = cutoff, maxT = now, tRange = maxT - minT;
+        const toX = t => PAD.l + ((t - minT) / tRange) * cw;
+        const toY = pct => PAD.t + ch - (Math.min(pct, 100) / 100) * ch;
+
+        // y grid lines
+        const gridPcts = [25, 50, 80, 100];
+        const gridLines = gridPcts.map(p => {
+            const y = toY(p);
+            const color = p === 80 ? 'rgba(224,85,85,0.25)' : p === 50 ? 'rgba(229,164,75,0.2)' : 'rgba(255,255,255,0.05)';
+            return `<line x1="${PAD.l}" y1="${y.toFixed(1)}" x2="${PAD.l+cw}" y2="${y.toFixed(1)}" stroke="${color}" stroke-width="1"/>
+                    <text x="${(PAD.l-4).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" fill="rgba(111,115,122,0.8)" font-size="8">${p}%</text>`;
+        }).join('');
+
+        // baseline
+        const baseY = (PAD.t + ch).toFixed(1);
+        const xAxis = `<line x1="${PAD.l}" y1="${baseY}" x2="${PAD.l+cw}" y2="${baseY}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>`;
+
+        // time-based x-axis ticks — sparse enough to not crowd
+        // day → every 4 hours; week → every day; month → every 5 days
+        const tickMs   = period === 'day' ? 4*3600e3 : period === 'week' ? 86400e3 : 5*86400e3;
+        const tickFmt  = period === 'day'
+            ? t => `${String(new Date(t).getHours()).padStart(2,'0')}:00`
+            : t => new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+        // align first tick to a clean boundary
+        const firstTick = Math.ceil(minT / tickMs) * tickMs;
+        const xTicks = [];
+        for (let t = firstTick; t <= maxT; t += tickMs) {
+            const x = toX(t);
+            xTicks.push(
+                `<line x1="${x.toFixed(1)}" y1="${baseY}" x2="${x.toFixed(1)}" y2="${(PAD.t+ch+4).toFixed(1)}" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>` +
+                `<text x="${x.toFixed(1)}" y="${(H-6).toFixed(1)}" text-anchor="middle" fill="rgba(111,115,122,0.8)" font-size="8">${tickFmt(t)}</text>`
+            );
+        }
+        const xTicksSvg = xTicks.join('');
+
+        // session data points
+        const points = sessions.map(s => ({
+            t: new Date(s.last_active).getTime(),
+            pct: Math.min(100, Math.round((s.total_tokens||0) / CTX_MAX * 100))
+        }));
+
+        // colored line segments
+        let polylines = '';
+        for (let i = 1; i < points.length; i++) {
+            const a = points[i-1], b = points[i];
+            const stroke = b.pct > 80 ? '#e05555' : b.pct > 50 ? '#e5a44b' : '#56a37e';
+            polylines += `<line x1="${toX(a.t).toFixed(1)}" y1="${toY(a.pct).toFixed(1)}" x2="${toX(b.t).toFixed(1)}" y2="${toY(b.pct).toFixed(1)}" stroke="${stroke}" stroke-width="1.5" stroke-linecap="round"/>`;
+        }
+
+        // area fill
+        const areaPoints = points.map(p => `${toX(p.t).toFixed(1)},${toY(p.pct).toFixed(1)}`).join(' ');
+        const latestPct  = points[points.length-1].pct;
+        const areaColor  = latestPct > 80 ? 'rgba(224,85,85,0.08)' : latestPct > 50 ? 'rgba(229,164,75,0.08)' : 'rgba(86,163,126,0.08)';
+        const area = `<polygon points="${areaPoints} ${toX(points[points.length-1].t).toFixed(1)},${baseY} ${toX(points[0].t).toFixed(1)},${baseY}" fill="${areaColor}"/>`;
+
+        // dots
+        const dots = points.map(p => {
+            const stroke = p.pct > 80 ? '#e05555' : p.pct > 50 ? '#e5a44b' : '#56a37e';
+            const lbl = new Date(p.t).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+            return `<circle cx="${toX(p.t).toFixed(1)}" cy="${toY(p.pct).toFixed(1)}" r="1.5" fill="${stroke}" opacity="0.9"><title>${lbl}: ${p.pct}% ctx</title></circle>`;
+        }).join('');
+
+        return `<div class="pressure-chart-wrap" style="margin-top:20px">
+            <div class="pressure-chart-header">
+                <span class="pressure-chart-title">Context usage over time</span>
+                <span class="pressure-chart-meta">${sessions.length} sessions</span>
+            </div>
+            <div class="pressure-chart-body">
+                <svg viewBox="0 0 ${W} ${H}" style="width:50%;display:block;margin:0 auto">
+                    ${gridLines}${xAxis}${xTicksSvg}${area}${polylines}${dots}
+                </svg>
+            </div>
+        </div>`;
+    }
+
     function renderAnalytics(a, period) {
         const section = document.getElementById('analytics-section');
         if (!section) return;
@@ -1059,7 +1137,7 @@
                 </div>
             </div>`;
 
-        section.innerHTML = statCards;
+        section.innerHTML = statCards + renderSessionTimeline(period);
     }
 
     function renderBurnersPie(rows) {
@@ -1092,7 +1170,7 @@
         }).join('');
         return `<div class="chart-panel">
             <div class="donut-wrap">
-                <svg viewBox="0 0 120 120" width="120" height="120" style="transform:rotate(-90deg);display:block">
+                <svg viewBox="0 0 120 120" width="180" height="180" style="transform:rotate(-90deg);display:block">
                     <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="${SW}"/>
                     ${rings}
                 </svg>

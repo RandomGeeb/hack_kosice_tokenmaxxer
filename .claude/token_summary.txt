@@ -1,10 +1,10 @@
-Active session: 3ad7f279-a3c3-4d...
-Last updated:   2026-04-19 07:11:17 UTC
+Active session: 6a91ac60-9180-4b...
+Last updated:   2026-04-19 07:40:28 UTC
 
   CC Baseline          2,000
   Memory Files           111
   Skills/Commands        290
   Global Skills       21,144
-  Conversation + Tools  125,086
+  Conversation + Tools   61,628
   ───────────────────────────
-  Total (API)        148,631
+  Total (API)         85,173

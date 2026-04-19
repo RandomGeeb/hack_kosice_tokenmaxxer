@@ -23,7 +23,9 @@
       "Bash(.venv/bin/pip install *)",
       "Bash(xargs -I{} python3 -c \" import json, sys with open\\('{}'\\) as f: for line in f: try: obj = json.loads\\(line\\) msg = obj.get\\('message', obj\\) if msg.get\\('role'\\) == 'assistant' and 'usage' in msg: print\\(json.dumps\\(msg['usage'], indent=2\\)\\) except: pass \")",
       "Bash(.venv/bin/python3 -c \"import anthropic; print\\(anthropic.__version__\\)\")",
-      "Bash(.venv/bin/python3 *)"
+      "Bash(.venv/bin/python3 *)",
+      "Bash(kill 85130)",
+      "Bash(xargs kill *)"
     ]
   },
   "hooks": {
