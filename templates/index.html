@@ -33,6 +33,8 @@
           display: grid;
           grid-template-columns: 300px 1fr;
           grid-template-rows: 56px 1fr;
+          height: 100vh;
+          overflow: hidden;
         }
         header {
           grid-column: 1/-1;
@@ -68,7 +70,13 @@
         .hstat-val { font-size: 14px; font-weight: 600; color: var(--accent2); }
         .hstat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
 
-        aside { background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 12px 0; }
+        aside {
+          background: var(--surface);
+          border-right: 1px solid var(--border);
+          overflow-y: auto;
+          padding: 12px 0;
+          height: 100%;
+        }
         .aside-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); padding: 8px 16px 6px; }
         .session-item {
           padding: 10px 16px; cursor: pointer;
@@ -84,7 +92,7 @@
         .session-date { color: var(--muted); font-size: 10px; }
         .badge-live { font-size: 9px; padding: 1px 6px; border-radius: 10px; background: rgba(79,195,161,0.15); color: var(--ok); font-weight: 700; letter-spacing: 0.06em; }
 
-        main { overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+        main { overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; height: 100%; }
         .page { display: none; flex-direction: column; gap: 20px; }
         .page.active { display: flex; }
 
@@ -103,11 +111,9 @@
         .stat-val.ok   { color: var(--ok); }
         .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
 
-        /* Context bar */
         .ctx-bar-wrap { background: var(--border); border-radius: 4px; height: 8px; overflow: hidden; margin: 4px 0 2px; }
         .ctx-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s cubic-bezier(0.16,1,0.3,1); }
 
-        /* Component rows */
         .comp-row { display: grid; grid-template-columns: 160px 1fr 72px 44px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
         .comp-row:last-child { border-bottom: none; }
         .comp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; margin-right: 6px; }
@@ -117,7 +123,6 @@
         .comp-tokens { text-align: right; font-size: 11px; color: var(--muted); white-space: nowrap; }
         .comp-pct { text-align: right; font-size: 11px; font-weight: 600; }
 
-        /* Burner rows */
         .burner-row { display: grid; grid-template-columns: 180px 1fr 80px 36px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
         .burner-row:last-child { border-bottom: none; }
         .burner-label { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -135,15 +140,25 @@
         }
         .waiting-banner .icon { font-size: 28px; opacity: 0.4; }
         .waiting-banner .title { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--text); }
+
+        .session-detail-header {
+          display: flex; align-items: center; gap: 12px; margin-bottom: 4px;
+        }
+        .back-btn {
+          font-size: 11px; color: var(--muted); cursor: pointer; padding: 4px 8px;
+          border: 1px solid var(--border2); border-radius: 5px; transition: all 0.15s;
+          background: none; font-family: var(--mono);
+        }
+        .back-btn:hover { color: var(--text); border-color: var(--accent); }
     </style>
 </head>
 <body>
 <header>
     <div class="logo">token<span>maxxer</span></div>
-    <nav class="tabs">
-        <div class="tab active" onclick="showPage('live')">Live <span class="live-dot inactive" id="live-dot"></span></div>
-        <div class="tab" onclick="showPage('history')">History</div>
-        <div class="tab" onclick="showPage('stats')">Top Burners</div>
+    <nav class="tabs" id="tab-nav">
+        <div class="tab active" data-page="live">Live <span class="live-dot inactive" id="live-dot"></span></div>
+        <div class="tab" data-page="history">History</div>
+        <div class="tab" data-page="stats">Top Burners</div>
     </nav>
     <div class="header-stats">
         <div class="hstat"><span class="hstat-val" id="hs-sessions">—</span><span class="hstat-label">sessions</span></div>
@@ -177,147 +192,126 @@
 </main>
 
 <script>
-const COLORS = ["#7c6af7","#4fc3a1","#FFD54F","#FF8A65","#F06292","#4DB6AC","#DCE775","#CE93D8"];
-const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n);
-const fmtDate = s => s ? new Date(s).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
-function pressureColor(pct) {
-    if (pct > 80) return 'var(--warn)';
-    if (pct > 50) return 'var(--mid)';
-    return 'var(--ok)';
-}
+    const COLORS = ["#7c6af7","#4fc3a1","#FFD54F","#FF8A65","#F06292","#4DB6AC","#DCE775","#CE93D8"];
+    const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n);
+    const fmtDate = s => s ? new Date(s).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
 
-// ── Tab switching ─────────────────────────────────────────────────────────────
-function showPage(name) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('page-' + name).classList.add('active');
-    event.target.closest('.tab').classList.add('active');
-    if (name === 'stats') loadBurners();
-}
-
-// ── Header stats ──────────────────────────────────────────────────────────────
-fetch('/api/stats').then(r => r.json()).then(s => {
-    document.getElementById('hs-sessions').textContent = s.session_count;
-    document.getElementById('hs-tokens').textContent   = fmt(s.total_tokens);
-});
-
-// ── Sidebar session list ──────────────────────────────────────────────────────
-function buildSidebar(sessions) {
-    const list = document.getElementById('session-list');
-    list.innerHTML = '';
-    if (!sessions.length) { list.innerHTML = '<div class="loading">no sessions yet</div>'; return; }
-    sessions.forEach(s => {
-        const name  = (s.project_path || '').split('/').pop() || s.session_id.slice(0,8);
-        const total = s.total_tokens || 0;
-        const live  = s.is_active === 1;
-        const el = document.createElement('div');
-        el.className = 'session-item' + (live ? ' live-session' : '');
-        el.dataset.id = s.session_id;
-        el.innerHTML = `
-            <div class="session-name">${live ? '<span class="badge-live">LIVE</span> ' : ''}${name}</div>
-            <div class="session-meta">
-                <span class="session-tokens">${fmt(total)} tok</span>
-                <span class="session-date">${fmtDate(s.last_active)}</span>
-            </div>`;
-        el.addEventListener('click', () => {
-            document.querySelectorAll('.session-item').forEach(e => e.classList.remove('active'));
-            el.classList.add('active');
-            showPage('history');
-            loadSessionDetail(s.session_id);
-        });
-        list.appendChild(el);
-    });
-}
-fetch('/api/sessions').then(r => r.json()).then(buildSidebar);
-
-// ── Live panel ────────────────────────────────────────────────────────────────
-function renderComponents(components, total) {
-    if (!components.length) return '<div style="color:var(--muted)">No data yet.</div>';
-    const maxTok = Math.max(...components.map(c => c.tokens), 1);
-    return components.map((c, i) => {
-        const color = COLORS[i % COLORS.length];
-        const barPct = Math.round(c.tokens / maxTok * 100);
-        return `<div class="comp-row">
-            <div><span class="comp-dot" style="background:${color}"></span><span class="comp-label">${c.label}</span></div>
-            <div class="bar-wrap"><div class="bar-fill" style="width:${barPct}%;background:${color}"></div></div>
-            <div class="comp-tokens">${c.tokens.toLocaleString()} tok</div>
-            <div class="comp-pct" style="color:${color}">${c.pct}%</div>
-        </div>`;
-    }).join('');
-}
-
-function renderLive(data) {
-    const dot = document.getElementById('live-dot');
-    if (!data.active) {
-        dot.className = 'live-dot inactive';
-        document.getElementById('live-panel').innerHTML = `
-            <div class="waiting-banner">
-                <div class="icon">◌</div>
-                <div class="title">Waiting for a session</div>
-                <div>Start a Claude Code session in this project to see live token usage.</div>
-            </div>`;
-        return;
+    function pressureColor(pct) {
+        if (pct > 80) return 'var(--warn)';
+        if (pct > 50) return 'var(--mid)';
+        return 'var(--ok)';
     }
-    dot.className = 'live-dot';
-    const s     = data.session;
-    const pct   = data.pct_of_context;
-    const color = pressureColor(pct);
-    const project = (s.project_path || '').split('/').pop() || 'unknown';
-    document.getElementById('live-panel').innerHTML = `
-        <div class="stat-grid">
-            <div class="stat-box">
-                <div class="stat-val">${fmt(data.total)}</div>
-                <div class="stat-label">Tokens used</div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-val" style="color:${color}">${pct}%</div>
-                <div class="stat-label">Context pressure</div>
-                <div class="ctx-bar-wrap" style="margin-top:8px">
-                    <div class="ctx-bar-fill" style="width:${pct}%;background:${color}"></div>
-                </div>
-            </div>
-            <div class="stat-box">
-                <div class="stat-val" style="font-size:15px">${project}</div>
-                <div class="stat-label">Project</div>
-                ${s.model ? `<div style="margin-top:6px"><span class="model-pill">${s.model}</span></div>` : ''}
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Context breakdown</span>
-                <span style="font-size:11px;color:var(--muted)">${data.components.length} components</span>
-            </div>
-            <div class="card-body">${renderComponents(data.components, data.total)}</div>
-        </div>`;
-}
 
-function pollLive() {
-    fetch('/api/current').then(r => r.json()).then(renderLive).catch(() => {});
-}
-pollLive();
-setInterval(pollLive, 5000);
+    // ── Tab switching ─────────────────────────────────────────────────────────────
+    function showPage(name) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('page-' + name).classList.add('active');
+        const matchingTab = document.querySelector(`.tab[data-page="${name}"]`);
+        if (matchingTab) matchingTab.classList.add('active');
+        if (name === 'stats') loadBurners();
+    }
 
-// ── History detail ────────────────────────────────────────────────────────────
-function loadSessionDetail(id) {
-    const panel = document.getElementById('history-panel');
-    panel.innerHTML = '<div class="loading">loading…</div>';
-    fetch(`/api/sessions/${id}`).then(r => r.json()).then(d => {
-        const s          = d.session;
-        const components = d.components || [];
-        const total      = components.reduce((a, c) => a + c.tokens, 0);
-        const pct        = Math.round(total / 200000 * 100);
-        const project    = (s.project_path || '').split('/').pop() || s.session_id.slice(0,8);
-        const compRows   = renderComponents(
-            components.map((c, i) => ({
-                ...c,
-                pct: total > 0 ? +(c.tokens / total * 100).toFixed(1) : 0,
-            })),
-            total
-        );
-        panel.innerHTML = `
+    // Wire up tab clicks
+    document.getElementById('tab-nav').addEventListener('click', e => {
+        const tab = e.target.closest('.tab');
+        if (tab && tab.dataset.page) showPage(tab.dataset.page);
+    });
+
+    // ── Header stats ──────────────────────────────────────────────────────────────
+    function refreshStats() {
+        fetch('/api/stats').then(r => r.json()).then(s => {
+            document.getElementById('hs-sessions').textContent = s.session_count;
+            document.getElementById('hs-tokens').textContent   = fmt(s.total_tokens);
+        }).catch(() => {});
+    }
+    refreshStats();
+
+    // ── Sidebar session list ──────────────────────────────────────────────────────
+    let activeSessionId = null;
+
+    function buildSidebar(sessions) {
+        const list = document.getElementById('session-list');
+        list.innerHTML = '';
+        if (!sessions.length) {
+            list.innerHTML = '<div class="loading">no sessions yet</div>';
+            return;
+        }
+        sessions.forEach(s => {
+            const name  = (s.project_path || '').split('/').pop() || s.session_id.slice(0,8);
+            const total = s.total_tokens || 0;
+            const live  = s.is_active === 1;
+            const el = document.createElement('div');
+            el.className = 'session-item' + (live ? ' live-session' : '') + (s.session_id === activeSessionId ? ' active' : '');
+            el.dataset.id = s.session_id;
+            el.innerHTML = `
+                <div class="session-name">${live ? '<span class="badge-live">LIVE</span> ' : ''}${name}</div>
+                <div class="session-meta">
+                    <span class="session-tokens">${fmt(total)} tok</span>
+                    <span class="session-date">${fmtDate(s.last_active)}</span>
+                </div>`;
+            el.addEventListener('click', () => {
+                activeSessionId = s.session_id;
+                document.querySelectorAll('.session-item').forEach(e => e.classList.remove('active'));
+                el.classList.add('active');
+                showPage('history');
+                loadSessionDetail(s.session_id);
+            });
+            list.appendChild(el);
+        });
+    }
+
+    function refreshSidebar() {
+        fetch('/api/sessions').then(r => r.json()).then(buildSidebar).catch(() => {});
+    }
+    refreshSidebar();
+
+    // ── Live panel ────────────────────────────────────────────────────────────────
+    function renderComponents(components, total) {
+        if (!components.length) return '<div style="color:var(--muted);padding:8px 0">No data yet.</div>';
+        const maxTok = Math.max(...components.map(c => c.tokens), 1);
+        return components.map((c, i) => {
+            const color  = COLORS[i % COLORS.length];
+            const barPct = Math.round(c.tokens / maxTok * 100);
+            return `<div class="comp-row">
+                <div><span class="comp-dot" style="background:${color}"></span><span class="comp-label" title="${c.label}">${c.label}</span></div>
+                <div class="bar-wrap"><div class="bar-fill" style="width:${barPct}%;background:${color}"></div></div>
+                <div class="comp-tokens">${c.tokens.toLocaleString()} tok</div>
+                <div class="comp-pct" style="color:${color}">${c.pct}%</div>
+            </div>`;
+        }).join('');
+    }
+
+    function renderLive(data) {
+        const dot = document.getElementById('live-dot');
+        if (!data.active) {
+            dot.className = 'live-dot inactive';
+            document.getElementById('live-panel').innerHTML = `
+                <div class="waiting-banner">
+                    <div class="icon">◌</div>
+                    <div class="title">Waiting for a session</div>
+                    <div>Start a Claude Code session in this project to see live token usage.</div>
+                </div>`;
+            return;
+        }
+        dot.className = 'live-dot';
+        const s     = data.session;
+        const pct   = data.pct_of_context;
+        const color = pressureColor(pct);
+        const project = (s.project_path || '').split('/').pop() || 'unknown';
+        document.getElementById('live-panel').innerHTML = `
             <div class="stat-grid">
-                <div class="stat-box"><div class="stat-val">${fmt(total)}</div><div class="stat-label">Total tokens</div></div>
-                <div class="stat-box"><div class="stat-val">${pct}%</div><div class="stat-label">Peak ctx pressure</div></div>
+                <div class="stat-box">
+                    <div class="stat-val">${fmt(data.total)}</div>
+                    <div class="stat-label">Tokens used</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val" style="color:${color}">${pct}%</div>
+                    <div class="stat-label">Context pressure</div>
+                    <div class="ctx-bar-wrap" style="margin-top:8px">
+                        <div class="ctx-bar-fill" style="width:${pct}%;background:${color}"></div>
+                    </div>
+                </div>
                 <div class="stat-box">
                     <div class="stat-val" style="font-size:15px">${project}</div>
                     <div class="stat-label">Project</div>
@@ -327,57 +321,117 @@ function loadSessionDetail(id) {
             <div class="card">
                 <div class="card-header">
                     <span class="card-title">Context breakdown</span>
-                    <span style="font-size:11px;color:var(--muted)">${fmtDate(s.last_active)}</span>
+                    <span style="font-size:11px;color:var(--muted)">${data.components.length} components</span>
                 </div>
-                <div class="card-body">${compRows || '<div style="color:var(--muted)">No breakdown recorded yet.</div>'}</div>
+                <div class="card-body">${renderComponents(data.components, data.total)}</div>
             </div>`;
-    });
-}
+    }
 
-// ── Top Burners ───────────────────────────────────────────────────────────────
-let burnersLoaded = false;
-function loadBurners() {
-    if (burnersLoaded) return;
-    burnersLoaded = true;
-    fetch('/api/burners').then(r => r.json()).then(rows => {
+    function pollLive() {
+        fetch('/api/current').then(r => r.json()).then(renderLive).catch(() => {});
+    }
+    pollLive();
+    setInterval(pollLive, 5000);
+
+    // ── History detail ────────────────────────────────────────────────────────────
+    function loadSessionDetail(id) {
+        const panel = document.getElementById('history-panel');
+        panel.innerHTML = '<div class="loading">loading…</div>';
+        fetch(`/api/sessions/${encodeURIComponent(id)}`)
+            .then(r => r.json())
+            .then(d => {
+                if (d.error) {
+                    panel.innerHTML = `<div class="empty-state"><div class="big">✕</div><div>${d.error}</div></div>`;
+                    return;
+                }
+                const s          = d.session;
+                const components = d.components || [];
+                const total      = components.reduce((a, c) => a + (c.tokens || 0), 0);
+                const pct        = total > 0 ? Math.round(total / 200000 * 100) : 0;
+                const pctColor   = pressureColor(pct);
+                const project    = (s.project_path || '').split('/').pop() || s.session_id.slice(0, 8);
+                const compRows   = renderComponents(
+                    components.map(c => ({
+                        ...c,
+                        pct: total > 0 ? +(c.tokens / total * 100).toFixed(1) : 0,
+                    })),
+                    total
+                );
+                panel.innerHTML = `
+                    <div class="stat-grid">
+                        <div class="stat-box">
+                            <div class="stat-val">${fmt(total)}</div>
+                            <div class="stat-label">Total tokens</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-val" style="color:${pctColor}">${pct}%</div>
+                            <div class="stat-label">Peak ctx pressure</div>
+                            <div class="ctx-bar-wrap" style="margin-top:8px">
+                                <div class="ctx-bar-fill" style="width:${pct}%;background:${pctColor}"></div>
+                            </div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-val" style="font-size:15px">${project}</div>
+                            <div class="stat-label">Project</div>
+                            ${s.model ? `<div style="margin-top:6px"><span class="model-pill">${s.model}</span></div>` : ''}
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <span class="card-title">Context breakdown</span>
+                            <span style="font-size:11px;color:var(--muted)">${fmtDate(s.last_active)} · ${components.length} files</span>
+                        </div>
+                        <div class="card-body">
+                            ${compRows || '<div style="color:var(--muted)">No breakdown recorded yet.</div>'}
+                        </div>
+                    </div>`;
+            })
+            .catch(() => {
+                panel.innerHTML = '<div class="empty-state"><div class="big">✕</div><div>Failed to load session.</div></div>';
+            });
+    }
+
+    // ── Top Burners ───────────────────────────────────────────────────────────────
+    function loadBurners() {
         const panel = document.getElementById('stats-panel');
-        if (!rows.length) {
-            panel.innerHTML = '<div class="empty-state"><div class="big">⬡</div><div>No session data yet.</div></div>';
-            return;
-        }
-        const maxTok = rows[0].total_tokens;
-        const burnerRows = rows.map((r, i) => {
-            const color  = COLORS[i % COLORS.length];
-            const barPct = Math.round(r.total_tokens / maxTok * 100);
-            return `<div class="burner-row">
-                <div>
-                    <div class="burner-label">${r.label}</div>
-                    <div class="burner-sub">${r.session_count} session${r.session_count !== 1 ? 's' : ''} · avg ${r.avg_tokens.toLocaleString()} tok</div>
-                </div>
-                <div class="bar-wrap"><div class="bar-fill" style="width:${barPct}%;background:${color}"></div></div>
-                <div class="burner-tokens">${r.total_tokens.toLocaleString()} tok</div>
-                <div class="burner-pct" style="color:${color}">#${i+1}</div>
-            </div>`;
-        }).join('');
-        panel.innerHTML = `
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Biggest context burners — all sessions</span>
-                    <span style="font-size:11px;color:var(--muted)">${rows.length} components</span>
-                </div>
-                <div class="card-body">${burnerRows}</div>
-            </div>`;
-    });
-}
+        panel.innerHTML = '<div class="loading">loading…</div>';
+        fetch('/api/burners').then(r => r.json()).then(rows => {
+            if (!rows.length) {
+                panel.innerHTML = '<div class="empty-state"><div class="big">⬡</div><div>No session data yet.</div></div>';
+                return;
+            }
+            const maxTok = rows[0].total_tokens;
+            const burnerRows = rows.map((r, i) => {
+                const color  = COLORS[i % COLORS.length];
+                const barPct = Math.round(r.total_tokens / maxTok * 100);
+                return `<div class="burner-row">
+                    <div>
+                        <div class="burner-label" title="${r.label}">${r.label}</div>
+                        <div class="burner-sub">${r.session_count} session${r.session_count !== 1 ? 's' : ''} · avg ${r.avg_tokens.toLocaleString()} tok</div>
+                    </div>
+                    <div class="bar-wrap"><div class="bar-fill" style="width:${barPct}%;background:${color}"></div></div>
+                    <div class="burner-tokens">${r.total_tokens.toLocaleString()} tok</div>
+                    <div class="burner-pct" style="color:${color}">#${i+1}</div>
+                </div>`;
+            }).join('');
+            panel.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Biggest context burners — all sessions</span>
+                        <span style="font-size:11px;color:var(--muted)">${rows.length} components</span>
+                    </div>
+                    <div class="card-body">${burnerRows}</div>
+                </div>`;
+        }).catch(() => {
+            panel.innerHTML = '<div class="empty-state"><div class="big">✕</div><div>Failed to load burners.</div></div>';
+        });
+    }
 
-// Refresh sidebar & header stats periodically so live sessions stay current
-setInterval(() => {
-    fetch('/api/sessions').then(r => r.json()).then(buildSidebar);
-    fetch('/api/stats').then(r => r.json()).then(s => {
-        document.getElementById('hs-sessions').textContent = s.session_count;
-        document.getElementById('hs-tokens').textContent   = fmt(s.total_tokens);
-    });
-}, 10000);
+    // ── Periodic refresh ──────────────────────────────────────────────────────────
+    setInterval(() => {
+        refreshSidebar();
+        refreshStats();
+    }, 10000);
 </script>
 </body>
 </html>
