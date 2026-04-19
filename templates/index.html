@@ -5,169 +5,342 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>tokenmaxxer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-          --bg:        #0a0a0b;
-          --surface:   #111114;
-          --border:    #1e1e24;
-          --border2:   #2a2a35;
-          --text:      #e8e8f0;
-          --muted:     #5a5a72;
-          --accent:    #7c6af7;
-          --accent2:   #4fc3a1;
-          --warn:      #e8624a;
-          --warn-soft: rgba(232,98,74,0.12);
-          --ok:        #4fc3a1;
-          --mid:       #eab308;
-          --mono:      'JetBrains Mono', monospace;
-          --sans:      'Syne', sans-serif;
+          --bg:         #1e1f22;
+          --surface:    #2b2d30;
+          --surface2:   #383a3e;
+          --border:     #393b40;
+          --border2:    #4d5052;
+          --text:       #bcbec4;
+          --text-strong:#dde1e7;
+          --muted:      #6f737a;
+          --accent:     #3574f0;
+          --accent-soft:rgba(53,116,240,0.12);
+          --accent2:    #56a37e;
+          --warn:       #e05555;
+          --warn-soft:  rgba(224,85,85,0.12);
+          --ok:         #56a37e;
+          --mid:        #e5a44b;
+          --mono:       'JetBrains Mono', monospace;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
           background: var(--bg);
           color: var(--text);
           font-family: var(--mono);
-          font-size: 13px;
+          font-size: 12px;
           min-height: 100vh;
           display: grid;
-          grid-template-columns: 300px 1fr;
-          grid-template-rows: 56px 1fr;
+          grid-template-columns: 280px 1fr;
+          grid-template-rows: 44px 1fr;
           height: 100vh;
           overflow: hidden;
         }
+
+        /* ── Toolbar ──────────────────────────────────────────────────────────── */
         header {
           grid-column: 1/-1;
           background: var(--surface);
           border-bottom: 1px solid var(--border);
           display: flex;
-          align-items: center;
-          padding: 0 24px;
-          gap: 16px;
+          align-items: stretch;
+          padding: 0;
         }
-        .logo { font-family: var(--sans); font-weight: 800; font-size: 17px; letter-spacing: -0.5px; }
-        .logo span { color: var(--accent); }
-        .tabs { display: flex; gap: 2px; margin-left: 24px; }
+        .logo {
+          display: flex; align-items: center;
+          padding: 0 16px;
+          font-size: 13px; font-weight: 700;
+          letter-spacing: -0.3px;
+          color: var(--text-strong);
+          border-right: 1px solid var(--border);
+          gap: 7px;
+        }
+        .logo-icon {
+          width: 18px; height: 18px;
+          background: var(--accent);
+          border-radius: 3px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 10px; font-weight: 700; color: #fff;
+          flex-shrink: 0;
+        }
+        .logo-word { color: var(--text-strong); }
+        .logo-word span { color: var(--accent); }
+
+        .tabs { display: flex; align-items: stretch; margin-left: 4px; }
         .tab {
-          padding: 6px 14px; border-radius: 6px; cursor: pointer;
-          font-size: 11px; font-weight: 600; text-transform: uppercase;
-          letter-spacing: 0.06em; color: var(--muted);
-          border: 1px solid transparent; transition: all 0.15s;
+          display: flex; align-items: center; gap: 6px;
+          padding: 0 14px;
+          font-size: 12px; font-weight: 500;
+          color: var(--muted);
+          border-bottom: 2px solid transparent;
+          cursor: pointer;
+          transition: color 0.12s, border-color 0.12s;
+          user-select: none;
         }
-        .tab:hover { color: var(--text); background: rgba(255,255,255,0.04); }
-        .tab.active { color: var(--accent); border-color: var(--border2); background: rgba(124,106,247,0.08); }
+        .tab:hover { color: var(--text); }
+        .tab.active { color: var(--text-strong); border-bottom-color: var(--accent); }
+
         .live-dot {
-          width: 6px; height: 6px; border-radius: 50%;
-          background: var(--ok); margin-left: 5px; display: inline-block;
+          width: 5px; height: 5px; border-radius: 50%;
+          background: var(--ok);
           animation: pulse 2s infinite;
         }
         .live-dot.inactive { background: var(--muted); animation: none; }
-        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
-        .header-stats { margin-left: auto; display: flex; gap: 24px; }
-        .hstat { display: flex; flex-direction: column; align-items: flex-end; }
-        .hstat-val { font-size: 14px; font-weight: 600; color: var(--accent2); }
-        .hstat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.25; } }
 
+        .header-stats { margin-left: auto; display: flex; align-items: center; gap: 0; padding-right: 2px; }
+        .hstat {
+          display: flex; flex-direction: column; align-items: flex-end;
+          padding: 0 14px; border-left: 1px solid var(--border);
+          height: 100%; justify-content: center;
+        }
+        .hstat-val { font-size: 13px; font-weight: 600; color: var(--text-strong); }
+        .hstat-label { font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+        /* ── Sidebar ──────────────────────────────────────────────────────────── */
         aside {
           background: var(--surface);
           border-right: 1px solid var(--border);
           overflow-y: auto;
-          padding: 12px 0;
-          height: 100%;
+          display: flex; flex-direction: column;
         }
-        .aside-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); padding: 8px 16px 6px; }
-        .session-item {
-          padding: 10px 16px; cursor: pointer;
-          border-left: 2px solid transparent;
-          transition: background 0.1s, border-color 0.1s;
+        .aside-header {
+          padding: 8px 12px 6px;
+          font-size: 10px; font-weight: 600;
+          text-transform: uppercase; letter-spacing: 0.08em;
+          color: var(--muted);
+          border-bottom: 1px solid var(--border);
+          flex-shrink: 0;
         }
-        .session-item:hover { background: rgba(124,106,247,0.06); }
-        .session-item.active { background: rgba(124,106,247,0.1); border-left-color: var(--accent); }
-        .session-item.live-session { border-left-color: var(--ok); background: rgba(79,195,161,0.06); }
-        .session-name { font-family: var(--sans); font-weight: 600; font-size: 13px; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .session-meta { display: flex; justify-content: space-between; align-items: center; }
-        .session-tokens { color: var(--muted); font-size: 11px; }
-        .session-date { color: var(--muted); font-size: 10px; }
-        .badge-live { font-size: 9px; padding: 1px 6px; border-radius: 10px; background: rgba(79,195,161,0.15); color: var(--ok); font-weight: 700; letter-spacing: 0.06em; }
+        .session-list-wrap { flex: 1; overflow-y: auto; padding: 2px 0; }
 
-        main { overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 20px; height: 100%; }
-        .page { display: none; flex-direction: column; gap: 20px; }
+        .session-item {
+          padding: 7px 12px;
+          cursor: pointer;
+          border-left: 2px solid transparent;
+          transition: background 0.08s;
+        }
+        .session-item:hover { background: rgba(255,255,255,0.04); }
+        .session-item.active { background: var(--accent-soft); border-left-color: var(--accent); }
+        .session-item.live-session { border-left-color: var(--ok); }
+        .session-item.live-session.active { background: rgba(86,163,126,0.1); }
+        .session-name {
+          font-size: 12px; font-weight: 500; color: var(--text-strong);
+          margin-bottom: 2px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .session-meta { display: flex; justify-content: space-between; align-items: center; }
+        .session-tokens { color: var(--muted); font-size: 10px; }
+        .session-date { color: var(--muted); font-size: 10px; }
+        .badge-live {
+          font-size: 9px; padding: 1px 5px; border-radius: 2px;
+          background: rgba(86,163,126,0.2); color: var(--ok);
+          font-weight: 700; letter-spacing: 0.05em; margin-right: 4px;
+        }
+
+        /* ── Main area ────────────────────────────────────────────────────────── */
+        main { overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: var(--bg); }
+        .page { display: none; flex-direction: column; gap: 12px; }
         .page.active { display: flex; }
 
-        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; color: var(--muted); gap: 8px; }
-        .empty-state .big { font-size: 32px; }
+        .empty-state {
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          min-height: 200px; color: var(--muted); gap: 6px; font-size: 12px;
+        }
+        .empty-state .icon { font-size: 24px; opacity: 0.3; }
 
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-        .card-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-        .card-title { font-family: var(--sans); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
-        .card-body { padding: 16px; }
-
-        .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
-        .stat-val { font-family: var(--sans); font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; margin-bottom: 5px; }
+        /* ── Stat grid ────────────────────────────────────────────────────────── */
+        .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .stat-box {
+          background: var(--surface); border: 1px solid var(--border);
+          border-radius: 2px; padding: 12px 14px;
+        }
+        .stat-val { font-size: 20px; font-weight: 700; color: var(--text-strong); line-height: 1; margin-bottom: 4px; }
         .stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
 
-        .ctx-bar-wrap { background: var(--border); border-radius: 4px; height: 8px; overflow: hidden; margin: 4px 0 2px; }
-        .ctx-bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s cubic-bezier(0.16,1,0.3,1); }
+        .ctx-bar-wrap { background: var(--border); border-radius: 1px; height: 4px; overflow: hidden; margin: 6px 0 2px; }
+        .ctx-bar-fill { height: 100%; border-radius: 1px; transition: width 0.5s cubic-bezier(0.16,1,0.3,1); }
 
-        /* Component rows */
-        .comp-row { display: grid; grid-template-columns: 160px 1fr 72px 44px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+        /* ── Cards / tool windows ─────────────────────────────────────────────── */
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
+        .card-header {
+          padding: 7px 12px;
+          border-bottom: 1px solid var(--border);
+          display: flex; align-items: center; justify-content: space-between;
+          background: var(--surface2);
+        }
+        .card-title {
+          font-size: 11px; font-weight: 600;
+          text-transform: uppercase; letter-spacing: 0.07em;
+          color: var(--muted);
+        }
+        .card-badge {
+          font-size: 10px; color: var(--muted);
+          background: var(--border); border-radius: 2px;
+          padding: 1px 6px;
+        }
+        .card-body { padding: 0; }
+
+        /* ── Component rows ───────────────────────────────────────────────────── */
+        .comp-row {
+          display: grid; grid-template-columns: 150px 1fr 78px 44px;
+          gap: 8px; align-items: center;
+          padding: 6px 12px;
+          border-bottom: 1px solid var(--border);
+        }
         .comp-row:last-child { border-bottom: none; }
-        .comp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: inline-block; margin-right: 6px; }
-        .comp-label { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .bar-wrap { background: var(--border); border-radius: 3px; height: 6px; overflow: hidden; }
-        .bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s cubic-bezier(0.16,1,0.3,1); }
-        .comp-tokens { text-align: right; font-size: 11px; color: var(--muted); white-space: nowrap; }
+        .comp-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; display: inline-block; margin-right: 6px; }
+        .comp-label { font-size: 11px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bar-wrap { background: var(--border); border-radius: 1px; height: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; border-radius: 1px; transition: width 0.4s cubic-bezier(0.16,1,0.3,1); }
+        .comp-tokens { text-align: right; font-size: 10px; color: var(--muted); white-space: nowrap; }
         .comp-pct { text-align: right; font-size: 11px; font-weight: 600; }
 
-        /* Skill group rows */
+        /* ── Skill group rows ─────────────────────────────────────────────────── */
         .group-row { border-bottom: 1px solid var(--border); }
         .group-row:last-child { border-bottom: none; }
         .group-header {
-          display: grid; grid-template-columns: 160px 1fr 72px 44px 20px;
-          gap: 8px; align-items: center; padding: 6px 0;
+          display: grid; grid-template-columns: 150px 1fr 78px 44px 18px;
+          gap: 8px; align-items: center;
+          padding: 6px 12px;
           cursor: pointer; user-select: none;
+          background: var(--surface);
+          transition: background 0.08s;
         }
-        .group-header:hover .group-name { color: var(--text); }
-        .group-name { font-size: 12px; font-weight: 600; }
+        .group-header:hover { background: var(--surface2); }
+        .group-name { font-size: 11px; font-weight: 600; color: var(--text); }
         .group-count { font-size: 10px; color: var(--muted); margin-left: 4px; }
-        .group-chevron { font-size: 10px; color: var(--muted); text-align: center; transition: transform 0.2s; display: inline-block; }
+        .group-chevron { font-size: 9px; color: var(--muted); text-align: center; transition: transform 0.15s; display: inline-block; }
         .group-chevron.open { transform: rotate(90deg); }
-        .group-skills { display: none; padding: 4px 0 4px 24px; background: rgba(255,255,255,0.015); border-top: 1px solid var(--border); }
+        .group-skills {
+          display: none; padding: 2px 0 2px 0;
+          background: var(--bg);
+          border-top: 1px solid var(--border);
+        }
         .group-skills.open { display: block; }
         .skill-row {
-          display: grid; grid-template-columns: 160px 1fr 72px 44px;
-          gap: 8px; align-items: center; padding: 4px 0;
-          border-bottom: 1px solid rgba(255,255,255,0.03);
+          display: grid; grid-template-columns: 150px 1fr 78px 44px;
+          gap: 8px; align-items: center;
+          padding: 4px 12px 4px 28px;
+          border-bottom: 1px solid rgba(255,255,255,0.025);
         }
         .skill-row:last-child { border-bottom: none; }
         .skill-name { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .skill-tokens { text-align: right; font-size: 10px; color: var(--muted); }
-        .skill-pct { text-align: right; font-size: 10px; color: var(--muted); }
+        .skill-tokens { text-align: right; font-size: 10px; color: var(--muted); opacity: 0.7; }
+        .skill-pct { text-align: right; font-size: 10px; color: var(--muted); opacity: 0.7; }
 
-        /* Burner rows */
-        .burner-row { display: grid; grid-template-columns: 180px 1fr 80px 36px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+        /* ── Burner rows ──────────────────────────────────────────────────────── */
+        .burner-row {
+          display: grid; grid-template-columns: 170px 1fr 88px 36px;
+          gap: 8px; align-items: center;
+          padding: 6px 12px;
+          border-bottom: 1px solid var(--border);
+        }
         .burner-row:last-child { border-bottom: none; }
-        .burner-label { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .burner-label { font-size: 11px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .burner-sub { font-size: 10px; color: var(--muted); margin-top: 1px; }
-        .burner-tokens { text-align: right; font-size: 11px; color: var(--muted); }
-        .burner-pct { text-align: right; font-size: 11px; font-weight: 600; color: var(--accent); }
+        .burner-tokens { text-align: right; font-size: 10px; color: var(--muted); }
+        .burner-pct { text-align: right; font-size: 11px; font-weight: 600; }
 
-        .model-pill { font-size: 10px; padding: 2px 8px; border-radius: 20px; border: 1px solid var(--border2); color: var(--muted); }
-        .loading { color: var(--muted); font-size: 12px; padding: 40px; text-align: center; }
+        .model-pill {
+          font-size: 10px; padding: 1px 6px; border-radius: 2px;
+          border: 1px solid var(--border2); color: var(--muted);
+        }
+        .loading { color: var(--muted); font-size: 12px; padding: 32px; text-align: center; }
 
         .waiting-banner {
-          border: 1px solid var(--border2); border-radius: 8px; padding: 28px;
-          text-align: center; color: var(--muted);
-          display: flex; flex-direction: column; align-items: center; gap: 10px;
+          border: 1px solid var(--border); border-radius: 2px; padding: 32px 24px;
+          text-align: center; color: var(--muted); background: var(--surface);
+          display: flex; flex-direction: column; align-items: center; gap: 8px;
         }
-        .waiting-banner .icon { font-size: 28px; opacity: 0.4; }
-        .waiting-banner .title { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--text); }
+        .waiting-banner .icon { font-size: 22px; opacity: 0.25; }
+        .waiting-banner .title { font-size: 13px; font-weight: 600; color: var(--text-strong); }
+        .waiting-banner .sub { font-size: 11px; color: var(--muted); max-width: 280px; line-height: 1.5; }
+
+        /* ── Donut chart ──────────────────────────────────────────────────────── */
+        .chart-panel {
+          display: flex; align-items: center; gap: 24px;
+          padding: 18px 20px 14px;
+          border-bottom: 1px solid var(--border);
+          background: var(--bg);
+        }
+        .donut-wrap { position: relative; flex-shrink: 0; width: 120px; height: 120px; }
+        .donut-wrap svg { transform: rotate(-90deg); display: block; }
+        .donut-centre {
+          position: absolute; inset: 0;
+          display: flex; flex-direction: column; align-items: center; justify-content: center;
+          pointer-events: none;
+        }
+        .donut-total { font-size: 16px; font-weight: 700; color: var(--text-strong); line-height: 1; }
+        .donut-sub { font-size: 9px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em; }
+        .donut-pct { font-size: 10px; font-weight: 600; margin-top: 4px; padding: 1px 5px; border-radius: 2px; }
+        .donut-legend { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; align-content: center; min-width: 0; }
+        .legend-item { display: flex; align-items: center; gap: 6px; min-width: 0; }
+        .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+        .legend-label { font-size: 10px; color: var(--text); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .legend-pct { font-size: 10px; font-weight: 600; flex-shrink: 0; }
+        @keyframes slice-in { from { opacity: 0; } to { opacity: 1; } }
+        .donut-slice { animation: slice-in 0.4s ease both; }
+
+        /* ── Cost estimator ───────────────────────────────────────────────────── */
+        .cost-controls {
+          display: flex; align-items: center; gap: 10px;
+          padding: 7px 12px; border-bottom: 1px solid var(--border);
+          background: var(--bg);
+        }
+        .cost-controls-label { font-size: 10px; color: var(--muted); }
+        .cost-model-select {
+          font-family: var(--mono); font-size: 11px;
+          background: var(--surface2); color: var(--text);
+          border: 1px solid var(--border2); border-radius: 2px;
+          padding: 2px 6px; cursor: pointer;
+        }
+        .cost-model-select:focus { outline: none; border-color: var(--accent); }
+        .currency-toggle { display: flex; gap: 1px; margin-left: auto; }
+        .currency-btn {
+          font-family: var(--mono); font-size: 10px; font-weight: 600;
+          padding: 2px 8px; border: 1px solid var(--border2);
+          background: var(--surface2); color: var(--muted); cursor: pointer;
+          transition: all 0.1s;
+        }
+        .currency-btn:first-child { border-radius: 2px 0 0 2px; }
+        .currency-btn:last-child  { border-radius: 0 2px 2px 0; }
+        .currency-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .cost-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+        .cost-box { padding: 14px 16px; border-right: 1px solid var(--border); }
+        .cost-box:last-child { border-right: none; }
+        .cost-val { font-size: 18px; font-weight: 700; color: var(--accent2); line-height: 1; margin-bottom: 4px; }
+        .cost-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+        .cost-sub { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+        /* ── Pressure line chart ──────────────────────────────────────────────────── */
+        .pressure-chart-wrap {
+          background: var(--surface); border: 1px solid var(--border);
+          border-radius: 2px; overflow: hidden;
+        }
+        .pressure-chart-header {
+          padding: 7px 12px;
+          border-bottom: 1px solid var(--border);
+          display: flex; align-items: center; justify-content: space-between;
+          background: var(--surface2);
+        }
+        .pressure-chart-title {
+          font-size: 11px; font-weight: 600;
+          text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted);
+        }
+        .pressure-chart-meta { font-size: 10px; color: var(--muted); }
+        .pressure-chart-body { padding: 8px 12px 10px; }
+        .pressure-chart-body svg { display: block; width: 100%; overflow: visible; }
     </style>
 </head>
 <body>
 <header>
-    <div class="logo">token<span>maxxer</span></div>
+    <div class="logo">
+        <div class="logo-icon">T</div>
+        <div class="logo-word">token<span>maxxer</span></div>
+    </div>
     <nav class="tabs" id="tab-nav">
         <div class="tab active" data-page="live">Live <span class="live-dot inactive" id="live-dot"></span></div>
         <div class="tab" data-page="history">History</div>
@@ -179,8 +352,10 @@
     </div>
 </header>
 <aside>
-    <div class="aside-label">Sessions</div>
-    <div id="session-list"><div class="loading">loading…</div></div>
+    <div class="aside-header">Sessions</div>
+    <div class="session-list-wrap">
+        <div id="session-list"><div class="loading">loading…</div></div>
+    </div>
 </aside>
 <main>
     <div class="page active" id="page-live">
@@ -189,7 +364,7 @@
     <div class="page" id="page-history">
         <div id="history-panel">
             <div class="empty-state">
-                <div class="big">⬡</div>
+                <div class="icon">◻</div>
                 <div>Select a session from the sidebar</div>
             </div>
         </div>
@@ -200,7 +375,7 @@
 </main>
 
 <script>
-    const COLORS = ["#7c6af7","#4fc3a1","#FFD54F","#FF8A65","#F06292","#4DB6AC","#DCE775","#CE93D8"];
+    const COLORS = ["#3574f0","#56a37e","#e5a44b","#c77dff","#ff8a65","#f06292","#4db6ac","#dce775"];
     const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n);
     const fmtDate = s => s ? new Date(s).toLocaleDateString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
     function pressureColor(pct) {
@@ -246,7 +421,7 @@
             el.className = 'session-item' + (live ? ' live-session' : '') + (s.session_id === activeSessionId ? ' active' : '');
             el.dataset.id = s.session_id;
             el.innerHTML = `
-                <div class="session-name">${live ? '<span class="badge-live">LIVE</span> ' : ''}${name}</div>
+                <div class="session-name">${live ? '<span class="badge-live">LIVE</span>' : ''}${name}</div>
                 <div class="session-meta">
                     <span class="session-tokens">${fmt(total)} tok</span>
                     <span class="session-date">${fmtDate(s.last_active)}</span>
@@ -262,17 +437,255 @@
         });
     }
     function refreshSidebar() {
-        fetch('/api/sessions').then(r => r.json()).then(buildSidebar).catch(() => {});
+        fetch('/api/sessions').then(r => r.json()).then(s => { window._allSessions = s; buildSidebar(s); }).catch(() => {});
     }
     refreshSidebar();
+
+
+    // ── Donut chart ───────────────────────────────────────────────────────────────
+    function renderDonut(components, skillGroups, grandTotal, pct, pctColor) {
+        const R = 44, SW = 13, CX = 60, CY = 60, circ = 2 * Math.PI * R, GAP = 1.5;
+        const slices = [];
+        components.forEach((c, i) => {
+            if (!(c.label === 'Global Skills' && skillGroups && skillGroups.length))
+                slices.push({ label: c.label, tokens: c.tokens, color: COLORS[i % COLORS.length] });
+        });
+        (skillGroups || []).forEach((g, gi) =>
+            slices.push({ label: g.group, tokens: g.total, color: COLORS[(gi + 4) % COLORS.length] }));
+
+        const total = slices.reduce((a, s) => a + s.tokens, 0) || 1;
+        let offset = 0;
+        const rings = slices.map((s, i) => {
+            const frac = s.tokens / total;
+            const dash = Math.max(0, frac * circ - GAP);
+            const off  = -(offset * circ);
+            offset += frac;
+            return `<circle class="donut-slice" cx="${CX}" cy="${CY}" r="${R}" fill="none"
+                stroke="${s.color}" stroke-width="${SW}"
+                stroke-dasharray="${dash.toFixed(2)} ${circ.toFixed(2)}"
+                stroke-dashoffset="${off.toFixed(2)}"
+                style="animation-delay:${(i*0.04).toFixed(2)}s"/>`;
+        }).join('');
+
+        const legend = slices.slice(0, 10).map(s => {
+            const p = (s.tokens / total * 100).toFixed(1);
+            return `<div class="legend-item">
+                <div class="legend-dot" style="background:${s.color}"></div>
+                <div class="legend-label" title="${s.label}">${s.label}</div>
+                <div class="legend-pct" style="color:${s.color}">${p}%</div>
+            </div>`;
+        }).join('');
+
+        const pctStyle = pct > 80 ? 'background:var(--warn-soft);color:var(--warn)' :
+                         pct > 50 ? 'background:rgba(229,164,75,0.12);color:var(--mid)' :
+                                    'background:rgba(86,163,126,0.12);color:var(--ok)';
+        return `<div class="chart-panel">
+            <div class="donut-wrap">
+                <svg viewBox="0 0 120 120" width="120" height="120">
+                    <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="${SW}"/>
+                    ${rings}
+                </svg>
+                <div class="donut-centre">
+                    <div class="donut-total">${fmt(grandTotal)}</div>
+                    <div class="donut-sub">tokens</div>
+                    <div class="donut-pct" style="${pctStyle}">${pct}% ctx</div>
+                </div>
+            </div>
+            <div class="donut-legend">${legend}</div>
+        </div>`;
+    }
+
+    // ── Cost estimator ────────────────────────────────────────────────────────────
+    const PRICING = {
+        'Sonnet 4.6': 3.00,
+        'Opus 4.7':   15.00,
+        'Haiku 4.5':  0.80,
+    };
+    const FX     = { USD: 1, EUR: 0.92, GBP: 0.79 };
+    const SYM    = { USD: '$', EUR: '€', GBP: '£' };
+    let _costCurrency = 'EUR';
+    let _costModel    = 'Sonnet 4.6';
+    let _costTokens   = 0;
+
+    function tokCost(tokens, model, currency) {
+        return tokens / 1_000_000 * PRICING[model] * FX[currency];
+    }
+    function fmtCost(n, currency) {
+        return SYM[currency] + (n < 0.001 ? n.toFixed(5) : n < 0.01 ? n.toFixed(4) : n.toFixed(2));
+    }
+    function monthlyProjection(currency, model) {
+        const now = Date.now(), ms30 = 30 * 24 * 3600e3;
+        const recent = (window._allSessions || []).filter(s => (now - new Date(s.last_active).getTime()) < ms30);
+        if (!recent.length) return null;
+        const totalTok = recent.reduce((a, s) => a + (s.total_tokens || 0), 0);
+        const oldest   = Math.min(...recent.map(s => new Date(s.last_active).getTime()));
+        const daysCov  = Math.max(1, (now - oldest) / (24 * 3600e3));
+        const projected = (totalTok / daysCov) * 30;
+        return { cost: tokCost(projected, model, currency), sessions: recent.length, days: Math.round(daysCov) };
+    }
+
+    function updateCostValues() {
+        const c = _costCurrency, m = _costModel;
+        const sessEl    = document.getElementById('cost-session');
+        const dailyEl   = document.getElementById('cost-daily');
+        const monthlyEl = document.getElementById('cost-monthly');
+        const monthSubEl= document.getElementById('cost-monthly-sub');
+        if (!sessEl) return;
+        sessEl.textContent = fmtCost(tokCost(_costTokens, m, c), c);
+        dailyEl.textContent = fmtCost(tokCost(_costTokens, m, c) * 1, c); // 1 session/day estimate
+        const proj = monthlyProjection(c, m);
+        if (proj) {
+            monthlyEl.textContent = fmtCost(proj.cost, c);
+            monthSubEl.textContent = `based on ${proj.sessions} sessions / ${proj.days}d`;
+        } else {
+            monthlyEl.textContent = '—';
+            monthSubEl.textContent = 'no session history';
+        }
+    }
+
+    function renderCostCard(tokens) {
+        _costTokens = tokens;
+        const modelOpts = Object.keys(PRICING).map(k =>
+            `<option value="${k}"${k === _costModel ? ' selected' : ''}>${k}</option>`).join('');
+        const curBtns = ['EUR','GBP','USD'].map(c =>
+            `<button class="currency-btn${c === _costCurrency ? ' active' : ''}" onclick="setCurrency('${c}')">${SYM[c]}</button>`).join('');
+        const proj = monthlyProjection(_costCurrency, _costModel);
+        const sessionCost  = fmtCost(tokCost(tokens, _costModel, _costCurrency), _costCurrency);
+        const dailyCost    = fmtCost(tokCost(tokens, _costModel, _costCurrency), _costCurrency);
+        const monthlyCost  = proj ? fmtCost(proj.cost, _costCurrency) : '—';
+        const monthlySub   = proj ? `based on ${proj.sessions} sessions / ${proj.days}d` : 'no session history';
+
+        return `<div class="card">
+            <div class="card-header">
+                <span class="card-title">Cost estimator</span>
+                <span class="card-badge">input tokens only</span>
+            </div>
+            <div class="cost-controls">
+                <span class="cost-controls-label">Model</span>
+                <select class="cost-model-select" onchange="setModel(this.value)">${modelOpts}</select>
+                <div class="currency-toggle">${curBtns}</div>
+            </div>
+            <div class="cost-grid">
+                <div class="cost-box">
+                    <div class="cost-val" id="cost-session">${sessionCost}</div>
+                    <div class="cost-label">This session</div>
+                    <div class="cost-sub">${(tokens/1000).toFixed(1)}k tokens</div>
+                </div>
+                <div class="cost-box">
+                    <div class="cost-val" id="cost-daily">${dailyCost}</div>
+                    <div class="cost-label">Est. daily</div>
+                    <div class="cost-sub">1 session/day</div>
+                </div>
+                <div class="cost-box">
+                    <div class="cost-val" id="cost-monthly">${monthlyCost}</div>
+                    <div class="cost-label">Projected / month</div>
+                    <div class="cost-sub" id="cost-monthly-sub">${monthlySub}</div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    function setCurrency(c) {
+        _costCurrency = c;
+        document.querySelectorAll('.currency-btn').forEach(b => b.classList.toggle('active', b.textContent === SYM[c]));
+        updateCostValues();
+    }
+    function setModel(m) {
+        _costModel = m;
+        updateCostValues();
+    }
+
+    // ── Pressure line chart ───────────────────────────────────────────────────────
+    const CHART_W = 500, CHART_H = 80, CHART_PAD = { t: 8, r: 8, b: 18, l: 32 };
+    const CW = CHART_W - CHART_PAD.l - CHART_PAD.r;
+    const CH = CHART_H - CHART_PAD.t - CHART_PAD.b;
+
+    function renderPressureChart(points, N = 30) {
+        const recent = points.slice(-N);
+        if (recent.length < 2) {
+            return `<div class="pressure-chart-wrap">
+                <div class="pressure-chart-header">
+                    <span class="pressure-chart-title">Context pressure over time</span>
+                    <span class="pressure-chart-meta">not enough data</span>
+                </div>
+                <div class="pressure-chart-body" style="color:var(--muted);font-size:11px;padding:16px 12px">Waiting for turns…</div>
+            </div>`;
+        }
+
+        const minT = recent[0].turn, maxT = recent[recent.length - 1].turn;
+        const xRange = Math.max(maxT - minT, 1);
+        const toX = t => CHART_PAD.l + ((t - minT) / xRange) * CW;
+        const toY = p => CHART_PAD.t + CH - (Math.min(p, 100) / 100) * CH;
+
+        // grid lines at 25 / 50 / 80 / 100
+        const gridPcts = [25, 50, 80, 100];
+        const gridLines = gridPcts.map(p => {
+            const y = toY(p);
+            const color = p === 80 ? 'rgba(224,85,85,0.25)' : p === 50 ? 'rgba(229,164,75,0.2)' : 'rgba(255,255,255,0.05)';
+            return `<line x1="${CHART_PAD.l}" y1="${y.toFixed(1)}" x2="${CHART_PAD.l + CW}" y2="${y.toFixed(1)}" stroke="${color}" stroke-width="1"/>
+                    <text x="${(CHART_PAD.l - 4).toFixed(1)}" y="${(y + 3).toFixed(1)}" text-anchor="end" fill="rgba(111,115,122,0.8)" font-size="8">${p}%</text>`;
+        }).join('');
+
+        // colored polyline segments (green/yellow/red by value)
+        let polylines = '';
+        for (let i = 1; i < recent.length; i++) {
+            const a = recent[i - 1], b = recent[i];
+            const pct = b.pct;
+            const stroke = pct > 80 ? '#e05555' : pct > 50 ? '#e5a44b' : '#56a37e';
+            polylines += `<line x1="${toX(a.turn).toFixed(1)}" y1="${toY(a.pct).toFixed(1)}" x2="${toX(b.turn).toFixed(1)}" y2="${toY(b.pct).toFixed(1)}" stroke="${stroke}" stroke-width="1.5" stroke-linecap="round"/>`;
+        }
+
+        // area fill under the line
+        const areaPoints = recent.map(p => `${toX(p.turn).toFixed(1)},${toY(p.pct).toFixed(1)}`).join(' ');
+        const lastX = toX(recent[recent.length-1].turn).toFixed(1);
+        const firstX = toX(recent[0].turn).toFixed(1);
+        const baseY = (CHART_PAD.t + CH).toFixed(1);
+        const latestPct = recent[recent.length - 1].pct;
+        const areaColor = latestPct > 80 ? 'rgba(224,85,85,0.08)' : latestPct > 50 ? 'rgba(229,164,75,0.08)' : 'rgba(86,163,126,0.08)';
+        const area = `<polygon points="${areaPoints} ${lastX},${baseY} ${firstX},${baseY}" fill="${areaColor}"/>`;
+
+        // dots at each point
+        const dots = recent.map(p => {
+            const stroke = p.pct > 80 ? '#e05555' : p.pct > 50 ? '#e5a44b' : '#56a37e';
+            return `<circle cx="${toX(p.turn).toFixed(1)}" cy="${toY(p.pct).toFixed(1)}" r="2.5" fill="${stroke}" opacity="0.85">
+                <title>turn ${p.turn}: ${p.pct}% (${(p.tokens/1000).toFixed(1)}k tok)</title>
+            </circle>`;
+        }).join('');
+
+        const latest = recent[recent.length - 1];
+        const latestColor = latest.pct > 80 ? 'var(--warn)' : latest.pct > 50 ? 'var(--mid)' : 'var(--ok)';
+
+        return `<div class="pressure-chart-wrap">
+            <div class="pressure-chart-header">
+                <span class="pressure-chart-title">Context pressure — last ${recent.length} turns</span>
+                <span class="pressure-chart-meta" style="color:${latestColor}">${latest.pct}% now · ${fmt(latest.tokens)} tok</span>
+            </div>
+            <div class="pressure-chart-body">
+                <svg viewBox="0 0 ${CHART_W} ${CHART_H}" height="${CHART_H}">
+                    ${gridLines}
+                    ${area}
+                    ${polylines}
+                    ${dots}
+                </svg>
+            </div>
+        </div>`;
+    }
+
+    let pressureCache = {};
+
+    function fetchPressure(sessionId, cb) {
+        fetch(`/api/pressure/${encodeURIComponent(sessionId)}`)
+            .then(r => r.json())
+            .then(pts => { pressureCache[sessionId] = pts; cb(pts); })
+            .catch(() => cb(pressureCache[sessionId] || []));
+    }
 
     // ── Shared renderers ──────────────────────────────────────────────────────────
     function renderComponents(components, grandTotal) {
         if (!components.length) return '';
-        const maxTok = Math.max(...components.map(c => c.tokens), 1);
         return components.map((c, i) => {
             const color  = COLORS[i % COLORS.length];
-            const barPct = Math.round(c.tokens / maxTok * 100);
+            const barPct = grandTotal > 0 ? Math.round(c.tokens / grandTotal * 100) : 0;
             const pct    = c.pct !== undefined ? c.pct : (grandTotal > 0 ? (c.tokens / grandTotal * 100).toFixed(1) : 0);
             return `<div class="comp-row">
                 <div><span class="comp-dot" style="background:${color}"></span><span class="comp-label" title="${c.label}">${c.label}</span></div>
@@ -332,8 +745,8 @@
             document.getElementById('live-panel').innerHTML = `
                 <div class="waiting-banner">
                     <div class="icon">◌</div>
-                    <div class="title">Waiting for a session</div>
-                    <div>Start a Claude Code session in this project to see live token usage.</div>
+                    <div class="title">No active session</div>
+                    <div class="sub">Start a Claude Code session in this project to see live token usage.</div>
                 </div>`;
             return;
         }
@@ -345,34 +758,42 @@
         const skillGroups = data.skill_groups || [];
         const components  = data.components  || [];
         const totalCount  = components.length + skillGroups.reduce((a, g) => a + g.skills.length, 0);
-        const compHtml    = renderComponents(components, data.total);
-        const skillHtml   = renderSkillGroups(skillGroups, data.total);
+        const compHtml   = renderComponents(components, data.total);
+        const skillHtml  = renderSkillGroups(skillGroups, data.total);
+        const donutHtml  = renderDonut(components, skillGroups, data.total, pct, color);
+        const costHtml   = renderCostCard(data.total);
 
-        document.getElementById('live-panel').innerHTML = `
-            <div class="stat-grid">
-                <div class="stat-box"><div class="stat-val">${fmt(data.total)}</div><div class="stat-label">Tokens used</div></div>
-                <div class="stat-box">
-                    <div class="stat-val" style="color:${color}">${pct}%</div>
-                    <div class="stat-label">Context pressure</div>
-                    <div class="ctx-bar-wrap" style="margin-top:8px"><div class="ctx-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        fetchPressure(s.session_id, pts => {
+            const chartHtml = renderPressureChart(pts);
+            document.getElementById('live-panel').innerHTML = `
+                <div class="stat-grid">
+                    <div class="stat-box"><div class="stat-val">${fmt(data.total)}</div><div class="stat-label">Tokens used</div></div>
+                    <div class="stat-box">
+                        <div class="stat-val" style="color:${color}">${pct}%</div>
+                        <div class="stat-label">Context pressure</div>
+                        <div class="ctx-bar-wrap"><div class="ctx-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-val" style="font-size:13px;padding-top:2px">${project}</div>
+                        <div class="stat-label">Project</div>
+                        ${s.model ? `<div style="margin-top:6px"><span class="model-pill">${s.model}</span></div>` : ''}
+                    </div>
                 </div>
-                <div class="stat-box">
-                    <div class="stat-val" style="font-size:15px">${project}</div>
-                    <div class="stat-label">Project</div>
-                    ${s.model ? `<div style="margin-top:6px"><span class="model-pill">${s.model}</span></div>` : ''}
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Context breakdown</span>
-                    <span style="font-size:11px;color:var(--muted)">${totalCount} components</span>
-                </div>
-                <div class="card-body">
-                    ${compHtml || ''}
-                    ${skillHtml || ''}
-                    ${!compHtml && !skillHtml ? '<div style="color:var(--muted)">No data yet.</div>' : ''}
-                </div>
-            </div>`;
+                ${costHtml}
+                ${chartHtml}
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Context breakdown</span>
+                        <span class="card-badge">${totalCount} components</span>
+                    </div>
+                    <div class="card-body">
+                        ${donutHtml}
+                        ${compHtml || ''}
+                        ${skillHtml || ''}
+                        ${!compHtml && !skillHtml ? '<div style="color:var(--muted);padding:12px">No data yet.</div>' : ''}
+                    </div>
+                </div>`;
+        });
     }
 
     function pollLive() {
@@ -382,6 +803,52 @@
     setInterval(pollLive, 5000);
 
     // ── History detail ────────────────────────────────────────────────────────────
+    function renderHistoryPanel(d) {
+        const panel = document.getElementById('history-panel');
+        const s           = d.session;
+        const components  = d.components  || [];
+        const skillGroups = d.skill_groups || [];
+        const compTotal   = components.reduce((a, c) => a + (c.tokens || 0), 0);
+        const skillTotal  = skillGroups.reduce((a, g) => a + g.total, 0);
+        const grandTotal  = compTotal + skillTotal;
+        const pct         = grandTotal > 0 ? Math.round(grandTotal / 200000 * 100) : 0;
+        const pctColor    = pressureColor(pct);
+        const project     = (s.project_path || '').split('/').pop() || s.session_id.slice(0,8);
+        const totalCount  = components.length + skillGroups.reduce((a, g) => a + g.skills.length, 0);
+        const compHtml  = renderComponents(components, grandTotal);
+        const skillHtml = renderSkillGroups(skillGroups, grandTotal);
+        const donutHtml = renderDonut(components, skillGroups, grandTotal, pct, pctColor);
+        const costHtml  = renderCostCard(grandTotal);
+
+        panel.innerHTML = `
+            <div class="stat-grid">
+                <div class="stat-box"><div class="stat-val">${fmt(grandTotal)}</div><div class="stat-label">Total tokens</div></div>
+                <div class="stat-box">
+                    <div class="stat-val" style="color:${pctColor}">${pct}%</div>
+                    <div class="stat-label">Peak ctx pressure</div>
+                    <div class="ctx-bar-wrap"><div class="ctx-bar-fill" style="width:${pct}%;background:${pctColor}"></div></div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-val" style="font-size:13px;padding-top:2px">${project}</div>
+                    <div class="stat-label">Project</div>
+                    ${s.model ? `<div style="margin-top:6px"><span class="model-pill">${s.model}</span></div>` : ''}
+                </div>
+            </div>
+            ${costHtml}
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Context breakdown</span>
+                    <span class="card-badge">${fmtDate(s.last_active)} · ${totalCount} components</span>
+                </div>
+                <div class="card-body">
+                    ${donutHtml}
+                    ${compHtml || ''}
+                    ${skillHtml || ''}
+                    ${!compHtml && !skillHtml ? '<div style="color:var(--muted);padding:12px">No breakdown recorded yet.</div>' : ''}
+                </div>
+            </div>`;
+    }
+
     function loadSessionDetail(id) {
         const panel = document.getElementById('history-panel');
         panel.innerHTML = '<div class="loading">loading…</div>';
@@ -389,50 +856,13 @@
             .then(r => r.json())
             .then(d => {
                 if (d.error) {
-                    panel.innerHTML = `<div class="empty-state"><div class="big">✕</div><div>${d.error}</div></div>`;
+                    panel.innerHTML = `<div class="empty-state"><div class="icon">✕</div><div>${d.error}</div></div>`;
                     return;
                 }
-                const s           = d.session;
-                const components  = d.components  || [];
-                const skillGroups = d.skill_groups || [];
-                const compTotal   = components.reduce((a, c) => a + (c.tokens || 0), 0);
-                const skillTotal  = skillGroups.reduce((a, g) => a + g.total, 0);
-                const grandTotal  = compTotal + skillTotal;
-                const pct         = grandTotal > 0 ? Math.round(grandTotal / 200000 * 100) : 0;
-                const pctColor    = pressureColor(pct);
-                const project     = (s.project_path || '').split('/').pop() || s.session_id.slice(0,8);
-                const totalCount  = components.length + skillGroups.reduce((a, g) => a + g.skills.length, 0);
-                const compHtml    = renderComponents(components, grandTotal);
-                const skillHtml   = renderSkillGroups(skillGroups, grandTotal);
-
-                panel.innerHTML = `
-                    <div class="stat-grid">
-                        <div class="stat-box"><div class="stat-val">${fmt(grandTotal)}</div><div class="stat-label">Total tokens</div></div>
-                        <div class="stat-box">
-                            <div class="stat-val" style="color:${pctColor}">${pct}%</div>
-                            <div class="stat-label">Peak ctx pressure</div>
-                            <div class="ctx-bar-wrap" style="margin-top:8px"><div class="ctx-bar-fill" style="width:${pct}%;background:${pctColor}"></div></div>
-                        </div>
-                        <div class="stat-box">
-                            <div class="stat-val" style="font-size:15px">${project}</div>
-                            <div class="stat-label">Project</div>
-                            ${s.model ? `<div style="margin-top:6px"><span class="model-pill">${s.model}</span></div>` : ''}
-                        </div>
-                    </div>
-                    <div class="card">
-                        <div class="card-header">
-                            <span class="card-title">Context breakdown</span>
-                            <span style="font-size:11px;color:var(--muted)">${fmtDate(s.last_active)} · ${totalCount} components</span>
-                        </div>
-                        <div class="card-body">
-                            ${compHtml || ''}
-                            ${skillHtml || ''}
-                            ${!compHtml && !skillHtml ? '<div style="color:var(--muted)">No breakdown recorded yet.</div>' : ''}
-                        </div>
-                    </div>`;
+                renderHistoryPanel(d);
             })
             .catch(() => {
-                panel.innerHTML = '<div class="empty-state"><div class="big">✕</div><div>Failed to load session.</div></div>';
+                panel.innerHTML = '<div class="empty-state"><div class="icon">✕</div><div>Failed to load session.</div></div>';
             });
     }
 
@@ -442,7 +872,7 @@
         panel.innerHTML = '<div class="loading">loading…</div>';
         fetch('/api/burners').then(r => r.json()).then(rows => {
             if (!rows.length) {
-                panel.innerHTML = '<div class="empty-state"><div class="big">⬡</div><div>No session data yet.</div></div>';
+                panel.innerHTML = '<div class="empty-state"><div class="icon">◻</div><div>No session data yet.</div></div>';
                 return;
             }
             const maxTok = rows[0].total_tokens;
@@ -463,12 +893,12 @@
                 <div class="card">
                     <div class="card-header">
                         <span class="card-title">Biggest context burners — all sessions</span>
-                        <span style="font-size:11px;color:var(--muted)">${rows.length} components</span>
+                        <span class="card-badge">${rows.length} components</span>
                     </div>
                     <div class="card-body">${burnerRows}</div>
                 </div>`;
         }).catch(() => {
-            panel.innerHTML = '<div class="empty-state"><div class="big">✕</div><div>Failed to load burners.</div></div>';
+            panel.innerHTML = '<div class="empty-state"><div class="icon">✕</div><div>Failed to load burners.</div></div>';
         });
     }
 

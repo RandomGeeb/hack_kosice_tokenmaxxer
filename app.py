@@ -177,6 +177,28 @@ def api_stats():
     return jsonify(dict(totals))
 
 
+@app.route("/api/pressure/<session_id>")
+def api_pressure(session_id):
+    db = get_db()
+    rows = db.execute(
+        """SELECT turn_index, total_tokens, timestamp
+           FROM turns
+           WHERE session_id=? AND total_tokens IS NOT NULL
+           ORDER BY turn_index ASC""",
+        (session_id,)
+    ).fetchall()
+    points = [
+        {
+            "turn":      r["turn_index"],
+            "pct":       round(r["total_tokens"] / CONTEXT_WINDOW * 100, 1),
+            "tokens":    r["total_tokens"],
+            "timestamp": r["timestamp"],
+        }
+        for r in rows
+    ]
+    return jsonify(points)
+
+
 @app.route("/")
 def index():
     return render_template("index.html")

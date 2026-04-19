@@ -217,9 +217,11 @@ class TokenMaxxerPanel(private val project: Project) : Disposable {
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #1e1e1e; color: #ccc; font-family: -apple-system, Arial, sans-serif; font-size: 12px; padding: 10px 12px 12px; }
+body { background: #1e1f22; color: #bcbec4; font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 10px 12px 12px; }
 .session-wrap { margin-bottom: 8px; }
 .session-select { width: 100%; background: rgba(255,255,255,0.06); color: #ccc; border: 1px solid rgba(255,255,255,0.12); border-radius: 4px; padding: 4px 6px; font-size: 11px; cursor: pointer; }
 .session-select:focus { outline: none; border-color: #4FC3F7; }
@@ -283,13 +285,13 @@ $note
     }
 
     private fun loadingHtml() =
-        """<body style="padding:16px;font-family:monospace;color:#888">Loading token data...</body>"""
+        """<!DOCTYPE html><html><head><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></head><body style="padding:16px;font-family:'JetBrains Mono',monospace;color:#6f737a;background:#1e1f22">Loading token data...</body></html>"""
 
     private fun noSessionHtml() =
-        """<body style="padding:24px 16px;font-family:monospace;color:#888;text-align:center;opacity:0.6">No active session.<br>Start a Claude Code session<br>to view token usage.</body>"""
+        """<!DOCTYPE html><html><head><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></head><body style="padding:24px 16px;font-family:'JetBrains Mono',monospace;color:#6f737a;background:#1e1f22;text-align:center">No active session.<br>Start a Claude Code session<br>to view token usage.</body></html>"""
 
     private fun errorHtml(msg: String) =
-        """<body style="padding:16px;font-family:monospace;color:#f44">Failed to fetch token data:<br><pre>${msg.replace("<", "&lt;")}</pre></body>"""
+        """<!DOCTYPE html><html><head><link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></head><body style="padding:16px;font-family:'JetBrains Mono',monospace;color:#e05555;background:#1e1f22">Failed to fetch token data:<br><pre style="margin-top:8px;font-size:11px;opacity:0.7">${msg.replace("<", "&lt;")}</pre></body></html>"""
 
     override fun dispose() {
         pollFuture?.cancel(false)
