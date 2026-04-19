@@ -1108,6 +1108,71 @@
         </div>`;
     }
 
+    let _insightsTotalTokens = 0, _insightsPeriod = 'week';
+
+    function updateInsightsCost() {
+        const c = _costCurrency, m = _costModel;
+        const days = { day: 1, week: 7, month: 30 }[_insightsPeriod] || 7;
+        const dailyTok   = _insightsTotalTokens / days;
+        const monthlyTok = dailyTok * 30;
+        const pEl = document.getElementById('ic-period-cost');
+        const mEl = document.getElementById('ic-proj-monthly');
+        const sEl = document.getElementById('ic-proj-sub');
+        if (!pEl) return;
+        pEl.textContent = fmtCost(tokCost(_insightsTotalTokens, m, c), c);
+        mEl.textContent = fmtCost(tokCost(monthlyTok, m, c), c);
+        if (sEl) sEl.textContent = `based on ${fmt(Math.round(dailyTok))} tok/day`;
+    }
+
+    function renderInsightsCost(totalTokens, period) {
+        _insightsTotalTokens = totalTokens;
+        _insightsPeriod      = period;
+        const days        = { day: 1, week: 7, month: 30 }[period] || 7;
+        const dailyTok    = totalTokens / days;
+        const monthlyTok  = dailyTok * 30;
+        const c = _costCurrency, m = _costModel;
+        const periodLabel = { day: 'Last 24 hours', week: 'Last 7 days', month: 'Last 30 days' }[period];
+        const modelOpts   = Object.keys(PRICING).map(k =>
+            `<option value="${k}"${k === m ? ' selected' : ''}>${k}</option>`).join('');
+        const curBtns     = ['EUR','GBP','USD'].map(cu =>
+            `<button class="currency-btn${cu === c ? ' active' : ''}" onclick="setCurrencyInsights('${cu}')">${SYM[cu]}</button>`).join('');
+        return `<div class="card" style="margin-top:20px">
+            <div class="card-header">
+                <span class="card-title">Cost estimation</span>
+                <span class="card-badge">input tokens only</span>
+            </div>
+            <div class="cost-controls">
+                <span class="cost-controls-label">Model</span>
+                <select class="cost-model-select" onchange="setModelInsights(this.value)">${modelOpts}</select>
+                <div class="currency-toggle">${curBtns}</div>
+            </div>
+            <div class="cost-grid" style="grid-template-columns:1fr 1fr">
+                <div class="cost-box">
+                    <div class="cost-val" id="ic-period-cost">${fmtCost(tokCost(totalTokens, m, c), c)}</div>
+                    <div class="cost-label">${periodLabel}</div>
+                    <div class="cost-sub">${fmt(totalTokens)} tokens</div>
+                </div>
+                <div class="cost-box">
+                    <div class="cost-val" id="ic-proj-monthly">${fmtCost(tokCost(monthlyTok, m, c), c)}</div>
+                    <div class="cost-label">Projected / month</div>
+                    <div class="cost-sub" id="ic-proj-sub">based on ${fmt(Math.round(dailyTok))} tok/day</div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    function setCurrencyInsights(cu) {
+        _costCurrency = cu;
+        document.querySelectorAll('.currency-btn').forEach(b => b.classList.toggle('active', b.textContent === SYM[cu]));
+        updateCostValues();
+        updateInsightsCost();
+    }
+    function setModelInsights(m) {
+        _costModel = m;
+        updateCostValues();
+        updateInsightsCost();
+    }
+
     function renderAnalytics(a, period) {
         const section = document.getElementById('analytics-section');
         if (!section) return;
@@ -1137,7 +1202,7 @@
                 </div>
             </div>`;
 
-        section.innerHTML = statCards + renderSessionTimeline(period);
+        section.innerHTML = statCards + renderInsightsCost(a.total_tokens || 0, period) + renderSessionTimeline(period);
     }
 
     function renderBurnersPie(rows) {
