@@ -31,12 +31,33 @@ def close_db(e=None):
         db.close()
 
 
-def _components_from_json(raw: str) -> tuple[dict, int]:
-    try:
-        c = json.loads(raw or "{}")
-    except (json.JSONDecodeError, TypeError):
-        c = {}
-    return c, sum(c.values())
+def _get_skill_groups(db, session_id):
+    """Shared helper: fetch skill groups for a session from context_files."""
+    skill_rows = db.execute(
+        """SELECT group_name, file_path AS label, tokens
+           FROM context_files
+           WHERE session_id=? AND group_name IS NOT NULL
+           ORDER BY group_name, tokens DESC""",
+        (session_id,)
+    ).fetchall()
+    groups = {}
+    for r in skill_rows:
+        groups.setdefault(r["group_name"], []).append({
+            "label":  r["label"],
+            "tokens": r["tokens"],
+        })
+    return [
+        {
+            "group":  g,
+            "total":  sum(s["tokens"] for s in skills),
+            "skills": skills,
+        }
+        for g, skills in sorted(
+            groups.items(),
+            key=lambda x: sum(s["tokens"] for s in x[1]),
+            reverse=True,
+        )
+    ]
 
 
 @app.route("/api/current")
@@ -48,18 +69,40 @@ def api_current():
     if not row:
         return jsonify({"active": False})
 
-    session = dict(row)
-    components, total = _components_from_json(session.get("components_json"))
+    session    = dict(row)
+    session_id = session["session_id"]
+
+    # Top-level components
+    component_rows = db.execute(
+        """SELECT file_path AS label, tokens
+           FROM context_files
+           WHERE session_id=? AND group_name IS NULL
+           ORDER BY tokens DESC""",
+        (session_id,)
+    ).fetchall()
+    comp_total = sum(r["tokens"] for r in component_rows)
+    components = [
+        {
+            "label":  r["label"],
+            "tokens": r["tokens"],
+            "pct":    round(r["tokens"] / comp_total * 100, 1) if comp_total else 0,
+        }
+        for r in component_rows
+    ]
+
+    # Skill groups
+    skill_groups = _get_skill_groups(db, session_id)
+    skill_total  = sum(g["total"] for g in skill_groups)
+    grand_total  = comp_total + skill_total
+
     return jsonify({
-        "active":          True,
-        "session":         session,
-        "components":      [
-            {"label": k, "tokens": v, "pct": round(v / total * 100, 1) if total else 0}
-            for k, v in components.items()
-        ],
-        "total":           total,
-        "pct_of_context":  round(total / CONTEXT_WINDOW * 100, 1),
-        "context_window":  CONTEXT_WINDOW,
+        "active":         True,
+        "session":        session,
+        "components":     components,
+        "skill_groups":   skill_groups,
+        "total":          grand_total,
+        "pct_of_context": round(grand_total / CONTEXT_WINDOW * 100, 1),
+        "context_window": CONTEXT_WINDOW,
     })
 
 
@@ -69,8 +112,9 @@ def api_sessions():
     rows = db.execute(
         """SELECT s.*,
                   COALESCE(
-                      (SELECT SUM(tokens) FROM context_files WHERE session_id=s.session_id),
-                      0
+                          (SELECT SUM(tokens) FROM context_files
+                           WHERE session_id=s.session_id AND group_name IS NULL),
+                          0
                   ) AS total_tokens
            FROM sessions s
            ORDER BY s.last_active DESC"""
@@ -81,18 +125,26 @@ def api_sessions():
 @app.route("/api/sessions/<session_id>")
 def api_session_detail(session_id):
     db = get_db()
-    session = db.execute("SELECT * FROM sessions WHERE session_id=?", (session_id,)).fetchone()
+    session = db.execute(
+        "SELECT * FROM sessions WHERE session_id=?", (session_id,)
+    ).fetchone()
     if not session:
         return jsonify({"error": "not found"}), 404
 
-    components_rows = db.execute(
-        "SELECT file_path AS label, tokens FROM context_files WHERE session_id=? ORDER BY tokens DESC",
+    component_rows = db.execute(
+        """SELECT file_path AS label, tokens
+           FROM context_files
+           WHERE session_id=? AND group_name IS NULL
+           ORDER BY tokens DESC""",
         (session_id,),
     ).fetchall()
 
+    skill_groups = _get_skill_groups(db, session_id)
+
     return jsonify({
-        "session":    dict(session),
-        "components": [dict(r) for r in components_rows],
+        "session":      dict(session),
+        "components":   [dict(r) for r in component_rows],
+        "skill_groups": skill_groups,
     })
 
 
@@ -105,9 +157,10 @@ def api_burners():
                   COUNT(DISTINCT session_id)   AS session_count,
                   CAST(AVG(tokens) AS INTEGER) AS avg_tokens
            FROM context_files
+           WHERE group_name IS NULL
            GROUP BY file_path
            ORDER BY total_tokens DESC
-           LIMIT 20"""
+               LIMIT 20"""
     ).fetchall()
     return jsonify([dict(r) for r in rows])
 
@@ -116,9 +169,10 @@ def api_burners():
 def api_stats():
     db = get_db()
     totals = db.execute(
-        """SELECT COUNT(DISTINCT session_id)     AS session_count,
-                  COALESCE(SUM(tokens), 0)        AS total_tokens
-           FROM context_files"""
+        """SELECT COUNT(DISTINCT session_id)  AS session_count,
+                  COALESCE(SUM(tokens), 0)    AS total_tokens
+           FROM context_files
+           WHERE group_name IS NULL"""
     ).fetchone()
     return jsonify(dict(totals))
 
