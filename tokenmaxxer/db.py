@@ -21,37 +21,44 @@ def get_conn(cwd: str = None):
 def init_db(cwd: str = None):
     with get_conn(cwd) as conn:
         conn.executescript("""
-            CREATE TABLE IF NOT EXISTS sessions (
-                session_id         TEXT PRIMARY KEY,
-                project_path       TEXT,
-                started_at         TEXT,
-                last_active        TEXT,
-                model              TEXT,
-                is_active          INTEGER DEFAULT 0,
-                tool_output_tokens INTEGER DEFAULT 0,
-                components_json    TEXT
-            );
-            CREATE TABLE IF NOT EXISTS context_files (
-                id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id    TEXT REFERENCES sessions(session_id),
-                turn_id       INTEGER,
-                file_path     TEXT,
-                tokens        INTEGER,
-                include_count INTEGER,
-                is_wasteful   INTEGER DEFAULT 0,
-                waste_reason  TEXT
-            );
-        """)
+                           CREATE TABLE IF NOT EXISTS sessions (
+                                                                   session_id         TEXT PRIMARY KEY,
+                                                                   project_path       TEXT,
+                                                                   started_at         TEXT,
+                                                                   last_active        TEXT,
+                                                                   model              TEXT,
+                                                                   is_active          INTEGER DEFAULT 0,
+                                                                   tool_output_tokens INTEGER DEFAULT 0,
+                                                                   components_json    TEXT
+                           );
+                           CREATE TABLE IF NOT EXISTS context_files (
+                                                                        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                                        session_id    TEXT REFERENCES sessions(session_id),
+                               turn_id       INTEGER,
+                               file_path     TEXT,
+                               tokens        INTEGER,
+                               include_count INTEGER,
+                               is_wasteful   INTEGER DEFAULT 0,
+                               waste_reason  TEXT,
+                               group_name    TEXT
+                               );
+                           """)
         # Migrate existing DBs that predate these columns
         for col, defn in [
             ("is_active",          "INTEGER DEFAULT 0"),
             ("tool_output_tokens", "INTEGER DEFAULT 0"),
             ("components_json",    "TEXT"),
+            ("group_name",         "TEXT"),
         ]:
             try:
                 conn.execute(f"ALTER TABLE sessions ADD COLUMN {col} {defn}")
             except sqlite3.OperationalError:
                 pass
+        # Migrate context_files too
+        try:
+            conn.execute("ALTER TABLE context_files ADD COLUMN group_name TEXT")
+        except sqlite3.OperationalError:
+            pass
 
 
 def save_session(session: dict, cwd: str = None):
@@ -98,7 +105,7 @@ def update_session_snapshot(session_id: str, components: dict, cwd: str = None):
 
 
 def update_session_meta(
-    session_id: str, model: str, started_at: str, last_active: str, cwd: str = None
+        session_id: str, model: str, started_at: str, last_active: str, cwd: str = None
 ):
     with get_conn(cwd) as conn:
         if model:
@@ -143,7 +150,7 @@ def get_active_session(project_path: str, cwd: str = None) -> Optional[dict]:
                         return dict(row)
                     row = conn.execute(
                         """SELECT * FROM sessions WHERE is_active=1
-                           AND ? LIKE project_path || '/%'
+                                                    AND ? LIKE project_path || '/%'
                            ORDER BY length(project_path) DESC, last_active DESC LIMIT 1""",
                         (project_path,),
                     ).fetchone()
@@ -158,16 +165,26 @@ def get_active_session(project_path: str, cwd: str = None) -> Optional[dict]:
     return None
 
 
-def replace_context_files(session_id: str, components: dict, cwd: str = None):
+def replace_context_files(session_id: str, components: dict, skill_groups: list = None, cwd: str = None):
     with get_conn(cwd) as conn:
         conn.execute("DELETE FROM context_files WHERE session_id=?", (session_id,))
+        # Top-level components
         for label, tokens in components.items():
             conn.execute(
                 """INSERT INTO context_files
-                   (session_id, turn_id, file_path, tokens, include_count, is_wasteful, waste_reason)
-                   VALUES (?, NULL, ?, ?, 1, 0, NULL)""",
+                   (session_id, turn_id, file_path, tokens, include_count, is_wasteful, waste_reason, group_name)
+                   VALUES (?, NULL, ?, ?, 1, 0, NULL, NULL)""",
                 (session_id, label, tokens),
             )
+        # Individual skills under their group
+        for group in (skill_groups or []):
+            for skill in group["skills"]:
+                conn.execute(
+                    """INSERT INTO context_files
+                       (session_id, turn_id, file_path, tokens, include_count, is_wasteful, waste_reason, group_name)
+                       VALUES (?, NULL, ?, ?, 1, 0, NULL, ?)""",
+                    (session_id, skill["name"], skill["tokens"], group["prefix"]),
+                )
 
 
 def get_all_sessions(cwd: str = None):
@@ -175,8 +192,8 @@ def get_all_sessions(cwd: str = None):
         return conn.execute(
             """SELECT s.*,
                       COALESCE(
-                          (SELECT SUM(tokens) FROM context_files WHERE session_id=s.session_id),
-                          0
+                              (SELECT SUM(tokens) FROM context_files WHERE session_id=s.session_id AND group_name IS NULL),
+                              0
                       ) as total_tokens
                FROM sessions s
                ORDER BY s.last_active DESC"""
@@ -191,9 +208,10 @@ def get_top_burners(cwd: str = None):
                       COUNT(DISTINCT session_id)      AS session_count,
                       CAST(AVG(tokens) AS INTEGER)    AS avg_tokens
                FROM context_files
+               WHERE group_name IS NULL
                GROUP BY file_path
                ORDER BY total_tokens DESC
-               LIMIT 20"""
+                   LIMIT 20"""
         ).fetchall()
 
 
@@ -202,7 +220,7 @@ def get_session_components(session_id: str, cwd: str = None) -> list:
         return conn.execute(
             """SELECT file_path AS label, tokens
                FROM context_files
-               WHERE session_id=?
+               WHERE session_id=? AND group_name IS NULL
                ORDER BY tokens DESC""",
             (session_id,),
         ).fetchall()
